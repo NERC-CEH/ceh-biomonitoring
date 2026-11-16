@@ -47,6 +47,6 @@ e.g. `cehbio run bats --folder E:/rec --deployment wood-1 --set detection_thresh
 
 See [Running and results](running.md) for the other files you get.
 
-## Citing
+## Licences and citing
 
-Mac Aodha, O., et al. (2022). Towards a general approach for bat echolocation detection and classification. *bioRxiv*. See the [BatDetect2 repository](https://github.com/macaodha/batdetect2) for its licence and the latest citation.
+**BatDetect2 is non-commercial only** (CC BY-NC 4.0). Licences, sources and what to cite are listed on the [front page](../README.md#models-licences-and-acknowledgements). The exact model versions you used are recorded in each chunk's `_summary.json`.

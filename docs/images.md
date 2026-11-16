@@ -199,15 +199,8 @@ The main columns:
 
 **Counting insects:** count **tracks**, not crops. Many tracks are a single photo (`is_single_image_track`). Tracking is simple, so one insect that moves a lot may appear as several tracks, and two similar moths side by side may occasionally be joined.
 
-## Models and credits
+## Models, licences and credits
 
-| Step | Model | By | Licence |
-|---|---|---|---|
-| Finding insects | insect-detector-flatbug-m-v2 (July 2026) | Svenning, Geissmann et al. ([flat-bug](https://github.com/darsa-group/flat-bug)) | MIT |
-| Moth or not | moth-vs-nonmoth-v2 (April 2024) | Mila / Rolnick lab, AMI project ([ami-data-companion](https://github.com/RolnickLab/ami-data-companion)) | see source |
-| Order | insect-order-v2 (10 May 2024) | Aarhus University, Bjerge et al. 2025 ([MCC24-trap](https://github.com/kimbjerge/MCC24-trap)) | see source |
-| Species | moth-species-*region*-v*N* | The Alan Turing Institute, for the AMBER project | **CC BY-NC 4.0: research and other non-commercial use only** |
+The models, who made them, their licences and what to cite are listed on the [front page](../README.md#models-licences-and-acknowledgements). The **moth species models are non-commercial only** (CC BY-NC 4.0).
 
-Earlier models used for AMBER / INSPIRE results up to 2026 stay available by name (`insect-detector-flatbug-m`, `moth-vs-nonmoth-v1`, `insect-order-v1`) to reproduce or compare with older results.
-
-The pipeline's processing follows [amber-inferences](https://github.com/AMI-system/amber-inferences) (MIT), so results match earlier UKCEH outputs. If you publish results, please cite the models you used. Their details and checksums are recorded in each chunk's `_summary.json`.
+Earlier models used for AMBER / INSPIRE results up to 2026 stay available by name (`insect-detector-flatbug-m`, `moth-vs-nonmoth-v1`, `insect-order-v1`; add `--set order_input=amber-300` to match the old order results exactly).

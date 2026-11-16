@@ -8,7 +8,7 @@ Finds bird calls and songs in audible recordings (e.g. AudioMoth or Song Meter, 
 | Species | about 6,000 worldwide | about 15,000 worldwide, including some non-birds |
 | Location filter | yes: give a latitude, longitude and week to keep only species likely there | no: you can give your own species list |
 | Scores | confidence from 0 to 1 | a "logit" score with no fixed range: higher is more certain |
-| Licence | CC BY-NC-SA 4.0: **non-commercial use only** | Apache 2.0: commercial use allowed |
+| Licence | model CC BY-NC-SA 4.0: **non-commercial use only** | Apache 2.0: commercial use allowed |
 
 ## Install
 
@@ -71,11 +71,6 @@ logit_threshold: 12
 
 See [Running and results](running.md) for the other files you get.
 
-## Citing
+## Licences and citing
 
-If you publish results, please cite the model you used:
-
-- **BirdNET:** Kahl, S., Wood, C. M., Eibl, M., & Klinck, H. (2021). BirdNET: A deep learning solution for avian diversity monitoring. *Ecological Informatics*, 61, 101236.
-- **Perch:** see Google's [Perch repository](https://github.com/google-research/perch).
-
-The exact model versions you used are recorded in each chunk's `_summary.json`.
+**BirdNET is non-commercial only**; Perch can be used commercially. Licences, sources and what to cite are listed on the [front page](../README.md#models-licences-and-acknowledgements). The exact model versions you used are recorded in each chunk's `_summary.json`.

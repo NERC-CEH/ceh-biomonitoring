@@ -61,17 +61,25 @@ Then see:
 - [Recorders and file names](docs/recorders.md): so every result gets its date and time
 - [Running and results](docs/running.md): big jobs, computing clusters, what you get and where it goes
 
-## Model licences: check before commercial work
+## Models, licences and acknowledgements
 
-| Model | Licence | Commercial use |
-|---|---|---|
-| **BirdNET** (model and location filter) | CC BY-NC-SA 4.0 | **No, non-commercial only** |
-| Perch v2 | Apache 2.0 | Yes |
-| BatDetect2 | see its repository | check |
-| Image models: flat-bug, moth/non-moth, order | see [Images](docs/images.md#models-and-credits) | check each |
-| Image models: moth species (Turing / AMBER) | CC BY-NC 4.0 | **No, non-commercial only** |
+This toolkit runs models made by other teams. **Check each model's licence before commercial work**, and please **cite the models you used** if you publish. Every run records the exact model versions it used, with checksums, in `chunks/*_summary.json`.
 
-> The image models are **still in development and far from perfect**: treat their results as suggestions, and have identifications checked by an expert.
+| Pipeline | Model (newest, used by default) | Made by | Source | Licence | Commercial use | Please cite |
+|---|---|---|---|---|---|---|
+| Birds | **BirdNET** (and its location filter) | K. Lisa Yang Center for Conservation Bioacoustics (Cornell Lab of Ornithology) and Chemnitz University of Technology | [BirdNET-Analyzer](https://github.com/birdnet-team/BirdNET-Analyzer) | code MIT, model CC BY-NC-SA 4.0 | **No** | Kahl, S., Wood, C. M., Eibl, M. & Klinck, H. (2021). BirdNET: a deep learning solution for avian diversity monitoring. *Ecological Informatics* 61, 101236 |
+| Birds | **Perch** v2 | Google DeepMind / Google Research | [perch](https://github.com/google-research/perch), [Kaggle](https://www.kaggle.com/models/google/bird-vocalization-classifier) | Apache 2.0 | Yes | see the Perch repository |
+| Bats | **BatDetect2** | Mac Aodha et al. (University of Edinburgh and partners) | [batdetect2](https://github.com/macaodha/batdetect2) | CC BY-NC 4.0 | **No** | Mac Aodha, O. et al. (2022). Towards a general approach for bat echolocation detection and classification. *bioRxiv* |
+| Images | **flat-bug** M v2: finding insects, with outlines | Svenning, Geissmann et al. | [flat-bug](https://github.com/darsa-group/flat-bug) | MIT | Yes | see the flat-bug repository |
+| Images | **Moth vs non-moth** (2024) | Rolnick lab, Mila (AMI project) | [ami-data-companion](https://github.com/RolnickLab/ami-data-companion) | code AGPL-3.0, model: see source | check | see the source repository |
+| Images | **Insect order** (10 May 2024) | Bjerge et al., Aarhus University | [MCC24-trap](https://github.com/kimbjerge/MCC24-trap) | code GPL-3.0, model: see source | check | Bjerge, K. et al. (2025). Towards edge processing of images from insect camera traps. *Remote Sensing in Ecology and Conservation*. doi:10.1002/rse2.70007 |
+| Images | **Moth species**, one model per region (`cehbio models`) | The Alan Turing Institute, for the AMBER project | this repository's model release | CC BY-NC 4.0 | **No** | the AMBER project |
+
+> ⚠️ The image models are **still in development and far from perfect**: treat their results as suggestions, and have identifications checked by an expert.
+
+**Keeping up to date:** the newest version of each model is always used. Run `cehbio update` now and then; `cehbio versions` and `cehbio models` show what you're using. Older image models stay available by name to reproduce past results.
+
+**Acknowledgements.** The images pipeline's processing builds on [amber-inferences](https://github.com/AMI-system/amber-inferences) (MIT) from the AMI system team, and on the AMBER and INSPIRE projects. We thank all the teams above for making their models and code openly available.
 
 ## Getting help
 
