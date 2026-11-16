@@ -73,7 +73,7 @@ This toolkit runs models made by other teams. **Check each model's licence befor
 | Images | **flat-bug** M v2: finding insects, with outlines | Svenning, Geissmann et al. | [flat-bug](https://github.com/darsa-group/flat-bug) | MIT | Yes | see the flat-bug repository |
 | Images | **Moth vs non-moth** (2024) | Rolnick lab, Mila (AMI project) | [ami-data-companion](https://github.com/RolnickLab/ami-data-companion) | code AGPL-3.0, model: see source | check | see the source repository |
 | Images | **Insect order** (10 May 2024) | Bjerge et al., Aarhus University | [MCC24-trap](https://github.com/kimbjerge/MCC24-trap) | code GPL-3.0, model: see source | check | Bjerge, K. et al. (2025). Towards edge processing of images from insect camera traps. *Remote Sensing in Ecology and Conservation*. doi:10.1002/rse2.70007 |
-| Images | **Moth species**, one model per region (`cehbio models`) | The Alan Turing Institute, for the AMBER project | this repository's model release | CC BY-NC 4.0 | **No** | the AMBER project |
+| Images | **Moth species**, one model per region (`cehbio models`) | The Alan Turing Institute and UKCEH, for the AMBER project | this repository's model release | CC BY-NC 4.0 | **No** | the AMBER project |
 
 > ⚠️ The image models are **still in development and far from perfect**: treat their results as suggestions, and have identifications checked by an expert.
 

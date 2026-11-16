@@ -104,13 +104,13 @@ models:
                url: "https://raw.githubusercontent.com/kimbjerge/MCC24-trap/main/model_order_060524/thresholdsTestTrain.csv"}
 
   # ------------------------------------------------------------------ species (one per region)
-  # Trained by The Alan Turing Institute for AMBER (publicly funded). Licence: CC BY-NC 4.0, research and
+  # Trained by The Alan Turing Institute and UKCEH for AMBER (publicly funded). Licence: CC BY-NC 4.0, research and
   # other non-commercial use only.
   moth-species-anguilla-v1:
     stage: species
     region: anguilla
     title: Moth species, Anguilla (160 species)
-    by: The Alan Turing Institute (AMBER)
+    by: The Alan Turing Institute and UKCEH (AMBER)
     released: 2024-11-19
     licence: CC BY-NC 4.0 (non-commercial)
     files:
@@ -123,7 +123,7 @@ models:
     stage: species
     region: costa-rica
     title: Moth species, Costa Rica (5,952 species)
-    by: The Alan Turing Institute (AMBER)
+    by: The Alan Turing Institute and UKCEH (AMBER)
     released: 2024-11-20
     licence: CC BY-NC 4.0 (non-commercial)
     files:
@@ -136,7 +136,7 @@ models:
     stage: species
     region: japan
     title: Moth species, Japan (6,040 species)
-    by: The Alan Turing Institute (AMBER)
+    by: The Alan Turing Institute and UKCEH (AMBER)
     released: 2026-01-09
     licence: CC BY-NC 4.0 (non-commercial)
     files:
@@ -149,7 +149,7 @@ models:
     stage: species
     region: kenya-uganda
     title: Moth species, Kenya and Uganda (3,045 species)
-    by: The Alan Turing Institute (AMBER)
+    by: The Alan Turing Institute and UKCEH (AMBER)
     released: 2024-11-19
     licence: CC BY-NC 4.0 (non-commercial)
     files:
@@ -162,7 +162,7 @@ models:
     stage: species
     region: madagascar
     title: Moth species, Madagascar (4,846 species)
-    by: The Alan Turing Institute (AMBER)
+    by: The Alan Turing Institute and UKCEH (AMBER)
     released: 2024-07-01
     licence: CC BY-NC 4.0 (non-commercial)
     status: not yet used on real deployments
@@ -176,7 +176,7 @@ models:
     stage: species
     region: namibia
     title: Moth species, Namibia (759 species)
-    by: The Alan Turing Institute (AMBER)
+    by: The Alan Turing Institute and UKCEH (AMBER)
     released: 2025-12-08
     licence: CC BY-NC 4.0 (non-commercial)
     files:
@@ -189,7 +189,7 @@ models:
     stage: species
     region: nigeria
     title: Moth species, Nigeria (2,057 species)
-    by: The Alan Turing Institute (AMBER)
+    by: The Alan Turing Institute and UKCEH (AMBER)
     released: 2024-11-19
     licence: CC BY-NC 4.0 (non-commercial)
     files:
@@ -202,7 +202,7 @@ models:
     stage: species
     region: singapore
     title: Moth species, Singapore (1,274 species)
-    by: The Alan Turing Institute (AMBER)
+    by: The Alan Turing Institute and UKCEH (AMBER)
     released: 2024-11-21
     licence: CC BY-NC 4.0 (non-commercial)
     files:
@@ -215,7 +215,7 @@ models:
     stage: species
     region: thailand
     title: Moth species, Thailand (3,800 species)
-    by: The Alan Turing Institute (AMBER)
+    by: The Alan Turing Institute and UKCEH (AMBER)
     released: 2024-11-21
     licence: CC BY-NC 4.0 (non-commercial)
     files:
@@ -228,7 +228,7 @@ models:
     stage: species
     region: uk
     title: Moth species, UK (2,661 species)
-    by: The Alan Turing Institute (AMBER)
+    by: The Alan Turing Institute and UKCEH (AMBER)
     released: 2024-05-13
     licence: CC BY-NC 4.0 (non-commercial)
     files:
