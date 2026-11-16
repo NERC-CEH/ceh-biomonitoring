@@ -1,0 +1,55 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ceh-biomonitoring"
+version = "0.1.0"
+description = "Biodiversity monitoring pipelines from UKCEH: birds (BirdNET or Perch) and bats (BatDetect2) on JASMIN, HPC or a laptop, plus uploading data to UKCEH."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+authors = [{ name = "UKCEH Biomonitoring" }]
+
+# The core: what every pipeline needs (object store, chunking, Slurm, outputs).
+# Minimum versions only, so people get the newest releases; each run records
+# the exact versions it used in its summary file (see ceh_biomonitoring.provenance).
+dependencies = [
+    "pandas>=2.2",
+    "pyarrow>=16",
+    "boto3>=1.34",
+    "pyyaml>=6",
+    "requests>=2.31",             # cehbio upload
+]
+
+[project.optional-dependencies]
+# Install only what you need, e.g.  pip install -e ".[bats]"  or  ".[birds,bats]"
+birds = [
+    "birdnet-analyzer>=2.4",      # BirdNET (weights are CC BY-NC-SA: non-commercial only)
+    "tensorflow>=2.21",           # also runs Perch (Apache 2.0, OK for commercial work)
+    "kagglehub>=0.3",             # downloads the Perch model
+    "librosa>=0.11",
+    "soundfile>=0.13",
+]
+bats = [
+    "batdetect2>=1.3",
+    "soundfile>=0.13",
+]
+dev = [
+    "pytest>=8",
+]
+all = [
+    "ceh-biomonitoring[birds,bats]",
+]
+
+[project.scripts]
+cehbio = "ceh_biomonitoring.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+ceh_biomonitoring = ["profiles/*.yml", "device_profiles/*.yml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

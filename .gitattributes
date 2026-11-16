@@ -1,0 +1,11 @@
+# Keep Linux line endings everywhere: scripts run on JASMIN and Polar.
+* text=auto eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.sbatch text eol=lf
+*.slurm text eol=lf
+*.parquet binary
+*.npz binary
+*.png binary
+*.jpg binary
+*.wav binary

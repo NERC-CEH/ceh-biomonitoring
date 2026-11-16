@@ -1,0 +1,27 @@
+# JASMIN (LOTUS2 batch cluster + sci servers): general settings that apply to every JASMIN user.
+# Group workspaces are only mounted on sci servers and LOTUS, not on login nodes.
+#
+# Set in ~/.config/ceh-biomonitoring/settings.yml:
+#   outputs_root: /gws/<your-group-workspace>/<you>/ceh-biomonitoring   (home is too small)
+#   slurm:
+#     account: <your JASMIN Slurm account>
+detect:
+  hosts: [jasmin, sci-vm, gpuhost]
+  paths: [/gws]
+
+outputs_root: /work/scratch-nopw2/{user}/ceh-biomonitoring/outputs   # scratch is temporary: set your own
+tmp_root: /work/scratch-nopw2/{user}/ceh-biomonitoring/tmp
+
+slurm:
+  enabled: true
+  partition: standard
+  qos: standard          # standard qos allows 1 CPU per job
+  time: "08:00:00"
+  mem: 24G
+  cpus: 1
+  max_parallel: 25
+  gpu:                   # JASMIN's ORCHID GPU cluster (needs ORCHID access)
+    partition: orchid
+    account: orchid
+    qos: orchid
+    gres: "gpu:1"

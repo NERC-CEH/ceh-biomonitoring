@@ -1,0 +1,6 @@
+# A laptop or desktop: no Slurm, chunks run one after another.
+outputs_root: ~/ceh-biomonitoring/outputs
+tmp_root: ~/ceh-biomonitoring/tmp
+
+slurm:
+  enabled: false

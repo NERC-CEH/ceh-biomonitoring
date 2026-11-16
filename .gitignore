@@ -1,0 +1,58 @@
+# credentials / secrets
+credentials/
+*.key
+*.pem
+*.env
+credentials/credentials.json
+
+# runtime outputs
+**/outputs/
+**/logs/
+**/tmp/
+
+# caches / build files
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+
+# local environments
+.conda/
+.env/
+venv/
+
+# large/local data
+*.wav
+*.flac
+*.mp3
+*.ogg
+*.m4a
+*.jpg
+*.jpeg
+*.png
+*.tif
+*.tiff
+*.parquet
+*.zip
+*.tar.gz
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+
+
+
+
+
+
+ultrasonic/batdetect_ultrasonic/logs/*
+!ultrasonic/batdetect_ultrasonic/logs/.gitkeep
+
+ultrasonic/batdetect_ultrasonic/outputs/*
+!ultrasonic/batdetect_ultrasonic/outputs/.gitkeep
+
+ultrasonic/batdetect_ultrasonic/tmp/*
+!ultrasonic/batdetect_ultrasonic/tmp/.gitkeep

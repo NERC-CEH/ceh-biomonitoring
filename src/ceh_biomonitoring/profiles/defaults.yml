@@ -1,0 +1,35 @@
+# Built-in defaults. Machine profiles (e.g. jasmin.yml, local.yml), plug-in profiles and your
+# ~/.config/ceh-biomonitoring/settings.yml override these in that order.
+# "{user}" is replaced with your username, "~" with your home folder.
+
+outputs_root: ~/ceh-biomonitoring/outputs
+tmp_root: ~/ceh-biomonitoring/tmp
+
+credentials_file: ~/.config/ceh-biomonitoring/credentials.json
+
+object_store:
+  # Empty = use the AWS_URL_ENDPOINT in your credentials file.
+  endpoint: ""
+
+countries_file: ""          # empty = the table shipped with the package
+
+upload:
+  url: https://connect-apps.ceh.ac.uk/ami-data-upload/
+
+chunking:
+  files_per_chunk: 100
+
+slurm:
+  enabled: false
+  account: ""
+  partition: ""
+  qos: ""
+  time: "08:00:00"
+  mem: 16G
+  cpus: 1
+  max_parallel: 25
+  gpu:
+    partition: ""
+    account: ""
+    qos: ""
+    gres: "gpu:1"

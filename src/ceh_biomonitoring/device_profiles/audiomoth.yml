@@ -1,0 +1,9 @@
+name: audiomoth
+title: AudioMoth (audible or ultrasonic, depending on sample rate)
+media: audio
+data_type: audible_recordings
+extensions: [.wav, .WAV]
+timestamp:
+  patterns:
+    - "YYYYMMDD_hhmmss"              # 20240705_043000.WAV
+  default_clock: UTC                # AudioMoth writes UTC unless configured otherwise
