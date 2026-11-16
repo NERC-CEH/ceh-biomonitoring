@@ -167,6 +167,11 @@ def upload_one(svc: UploadService, base: dict, path: Path, logp: Path, check_rem
 
 
 # ---------------------------------------------------------------- the conversation
+def clean_path(text: str) -> Path:
+    """A folder typed or dragged in: drop surrounding spaces and quotation marks."""
+    return Path(text.strip().strip("\"'").strip())
+
+
 def _ask(prompt: str, default: str | None = None) -> str:
     v = input(f"{prompt}{f' [{default}]' if default else ''}: ").strip()
     return v or (default or "")
@@ -211,11 +216,11 @@ def run(args, settings) -> None:
              else ["snapshot_images", "audible_recordings", "ultrasound_recordings"])
     data_type = _choose("\nWhat are you uploading?", types, args.data_type)
 
-    folder = Path(args.folder or _ask("\nFolder with the files (e.g. the SD card)"))
+    folder = clean_path(args.folder or _ask("\nFolder with the files (e.g. the SD card)"))
     while not folder.is_dir():
         if args.folder:
             raise SystemExit(f"Folder not found: {folder}")
-        folder = Path(_ask("That folder doesn't exist. Folder path"))
+        folder = clean_path(_ask("That folder doesn't exist. Folder path"))
     files = find_files(folder, data_type)
     if not files:
         raise SystemExit(f"No {data_type} files found in {folder}")

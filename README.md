@@ -32,11 +32,25 @@ cehbio pipelines             # what is installed
 
 To add another pipeline later, run `./install.sh <name>` again. Rerunning it also updates everything to the newest model releases.
 
+> **On Windows:** `./install.sh` needs a Mac/Linux-style shell. In the **Miniforge Prompt**, use instead:
+>
+> ```
+> conda create -n ceh-biomonitoring python=3.11 -y
+> conda activate ceh-biomonitoring
+> pip install https://github.com/NERC-CEH/ceh-biomonitoring/archive/refs/heads/main.zip
+> ```
+>
+> That is enough for uploading. For a pipeline, add its name in brackets, e.g. `pip install "ceh-biomonitoring[bats] @ https://github.com/NERC-CEH/ceh-biomonitoring/archive/refs/heads/main.zip"`.
+
 > **On JASMIN:** install on a sci server (e.g. `ssh sci-vm-04`), not a login node. The installer works around JASMIN's small `/tmp` limit for you.
 
 ## Sending your data to UKCEH
 
 You need an **upload service username and password**. They are given to partners working with UKCEH where it has been agreed that UKCEH will process your data. To get them, contact **Alyssa Duffy** at [alyduf@ceh.ac.uk](mailto:alyduf@ceh.ac.uk).
+
+**New to this? Follow the [step-by-step upload guide](docs/upload-guide.md).** It covers installing on Windows or Mac, every question the tool asks, and what to do if something goes wrong. No programming experience is needed.
+
+In short:
 
 ```bash
 conda activate ceh-biomonitoring

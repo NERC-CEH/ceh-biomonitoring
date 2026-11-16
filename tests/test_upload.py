@@ -86,3 +86,9 @@ def test_find_files_audio(tmp_path):
     (tmp_path / "a.WAV").write_bytes(b"x" * 20_000)
     (tmp_path / "b.jpg").write_bytes(b"x" * 20_000)
     assert [p.name for p in upload.find_files(tmp_path, "audible_recordings")] == ["a.WAV"]
+
+
+def test_dragged_folder_quotes_are_removed():
+    from ceh_biomonitoring.upload import clean_path
+    assert str(clean_path('  "C:/My Data/site 1"  ')) == str(Path("C:/My Data/site 1"))
+    assert str(clean_path("'/data/site'")) == str(Path("/data/site"))
