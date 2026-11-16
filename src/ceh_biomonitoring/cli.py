@@ -96,12 +96,15 @@ def cmd_check(args):
     sys.exit(0 if ok else 1)
 
 
-def _where(s, args) -> dict:
-    """Country row, a project bucket, or a local folder. Sets args.country to the output folder name."""
+def _where(s, args, need_source: bool = True) -> dict:
+    """Country row, a project bucket, or a local folder. Sets args.country to the output folder name.
+    status/combine only read results, so with no place given they look at local-folder runs."""
     folder = getattr(args, "folder", None)
     if not args.country and not args.bucket and not folder:
-        raise SystemExit("Give --folder (files on disk) or --bucket (an object-store bucket).")
-    if folder:
+        if need_source:
+            raise SystemExit("Give --folder (files on disk) or --bucket (an object-store bucket).")
+        folder = "local"
+    if folder or (args.country == "local" and not args.bucket):
         name = args.country or "local"
         c = {"country_name": name, "country_folder": name, "bucket_code": "local"}
     elif args.bucket:
@@ -187,7 +190,9 @@ def cmd_run(args):
         return
     job = slurm.submit(script)
     print(f"Submitted Slurm job {job}: {len(paths)} tasks. Logs: {job_dir / 'logs'}")
-    print(f"Check progress:  cehbio status {p.name} --country {args.country} --deployment {args.deployment}")
+    place = "" if c.get("bucket_code") == "local" else f" --country {args.country}" if not args.bucket else f" --bucket {args.bucket}"
+    print(f"Check progress:  cehbio status {p.name}{place} --deployment {args.deployment}")
+    print(f"When finished:   cehbio combine {p.name}{place} --deployment {args.deployment}")
 
 
 def cmd_run_chunk(args):
@@ -199,7 +204,7 @@ def cmd_run_chunk(args):
 def cmd_status(args):
     s = _settings(args)
     p = pipelines.get(args.pipeline)
-    _where(s, args)
+    _where(s, args, need_source=False)
     d = runner.deployment_dir(s, p, args.country, args.deployment) / "chunks"
     m = chunks.manifest_path(s.pipeline_dir(p.name, args.country), args.deployment)
     n = json.loads(m.read_text())["n_chunks"] if m.exists() else "?"
@@ -213,7 +218,7 @@ def cmd_status(args):
 
 def cmd_combine(args):
     s = _settings(args)
-    _where(s, args)
+    _where(s, args, need_source=False)
     qa = runner.combine(s, pipelines.get(args.pipeline), args.country, args.deployment)
     print(json.dumps(qa, indent=2))
     if not qa["complete"]:

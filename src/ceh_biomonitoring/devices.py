@@ -67,8 +67,8 @@ def pattern_to_regex(pattern: str) -> re.Pattern:
     """Plain-language file-name pattern -> regex.
 
     YYYY MM DD hh mm ss = date and time parts, SERIAL = device ID, * = anything, everything else literal.
-      "SERIAL-YYYYMMDDThhmmss"  matches 868531061597790-20260806T025318.jpg
-      "*_YYYYMMDD_hhmmss"       matches 2MM24834_20240705_043000.wav
+      "SERIAL-YYYYMMDDThhmmss"  matches 123456789012345-20260806T025318.jpg
+      "*_YYYYMMDD_hhmmss"       matches SMA01234_20240705_043000.wav
     Note: MM is month and mm is minutes, as in date formats.
     """
     out, i = "", 0

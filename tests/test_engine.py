@@ -174,13 +174,13 @@ def test_devices_layering_and_timestamps():
     from ceh_biomonitoring import devices
     names = devices.available()
     assert {"audiomoth", "song-meter"} <= set(names)
-    assert devices.parse_timestamp("2MM24834_20240705_043000.wav", devices.get("song-meter")) == "2024-07-05 04:30:00"
+    assert devices.parse_timestamp("SMA01234_20240705_043000.wav", devices.get("song-meter")) == "2024-07-05 04:30:00"
     assert devices.parse_timestamp("no_date_here.wav", devices.get("audiomoth")) is None
-    r = devices.parse_filename("2MM24834_20240705_043000.wav", devices.get("song-meter"))
-    assert r == {"file_datetime": "2024-07-05 04:30:00", "device_serial": "2MM24834"}
+    r = devices.parse_filename("SMA01234_20240705_043000.wav", devices.get("song-meter"))
+    assert r == {"file_datetime": "2024-07-05 04:30:00", "device_serial": "SMA01234"}
     # a pattern given on the command line wins, and MM (month) is not mm (minutes)
     assert devices.parse_timestamp("site3__13-05-2026__22h41m07s.wav", None, "*__DD-MM-YYYY__hhhmmmsss") == "2026-05-13 22:41:07"
-    assert devices.parse_timestamp("868531061597790-20260806T025318.jpg", None, "SERIAL-YYYYMMDDThhmmss") == "2026-08-06 02:53:18"
+    assert devices.parse_timestamp("123456789012345-20260806T025318.jpg", None, "SERIAL-YYYYMMDDThhmmss") == "2026-08-06 02:53:18"
     assert devices.parse_timestamp("rec 2026-11-13 19.45.00.wav", None, "rec YYYY-MM-DD hh.mm.ss") == "2026-11-13 19:45:00"
     # device params sit between pipeline defaults and the command line
     p = pipelines.get("bats")
@@ -200,3 +200,22 @@ def test_device_must_match_pipeline():
 def test_cli_parses():
     a = build_parser().parse_args(["run", "bats", "--country", "uk", "--deployment", "dep1", "--set", "detection_threshold=0.5"])
     assert a.pipeline == "bats" and a.set == ["detection_threshold=0.5"]
+
+
+def test_image_device_timestamps():
+    from ceh_biomonitoring import devices
+    ami, lep = devices.get("ami-trap"), devices.get("lepisense")
+    assert devices.parse_timestamp("dep000076/snapshot_images/20240725204340-snapshot.jpg", ami) == "2024-07-25 20:43:40"
+    r = devices.parse_filename("site-a/123456789012345-20260806T025318.jpg", lep)
+    assert r == {"file_datetime": "2026-08-06 02:53:18", "device_serial": "123456789012345"}
+    assert devices.parse_timestamp("ami-mini-20250428T210338_crop_1.jpg", lep) == "2025-04-28 21:03:38"
+    assert lep["needs_mask"] is True and ami["needs_mask"] is False
+
+
+def test_status_and_combine_default_to_local_results(settings):
+    from ceh_biomonitoring.cli import _where, build_parser
+    a = build_parser().parse_args(["status", "bats", "--deployment", "wood-1"])
+    assert _where(settings, a, need_source=False)["bucket_code"] == "local" and a.country == "local"
+    a = build_parser().parse_args(["run", "bats", "--deployment", "wood-1"])
+    with pytest.raises(SystemExit):
+        _where(settings, a)

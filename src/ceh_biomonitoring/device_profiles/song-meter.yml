@@ -5,5 +5,5 @@ data_type: audible_recordings
 extensions: [.wav, .WAV, .flac]
 timestamp:
   patterns:
-    - "SERIAL_YYYYMMDD_hhmmss"       # 2MM24834_20240705_043000.wav
+    - "SERIAL_YYYYMMDD_hhmmss"       # SMA01234_20240705_043000.wav
   # Clock (local or UTC) comes from the deployment's details.

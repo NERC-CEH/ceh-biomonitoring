@@ -1,0 +1,15 @@
+name: ami-trap
+title: AMI trap (Automated Monitoring of Insects light trap)
+media: images
+data_type: snapshot_images
+extensions: [.jpg, .jpeg]
+timestamp:
+  patterns:                         # tried in order; --timestamp-pattern goes first
+    - "YYYYMMDDhhmmss-snapshot"      # 20240725204340-snapshot.jpg
+  # Whether the clock is local time or UTC depends on how the camera was set up.
+  # It belongs to the deployment, not the trap: record it with each deployment.
+needs_mask: false
+params:
+  images:
+    box_threshold: 0.2
+    max_crops_per_image: 100

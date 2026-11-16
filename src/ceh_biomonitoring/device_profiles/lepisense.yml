@@ -1,0 +1,17 @@
+name: lepisense
+title: LepiSense / AMI-mini (ring light in frame)
+media: images
+data_type: snapshot_images
+extensions: [.jpg, .jpeg]
+timestamp:
+  patterns:                         # tried in order; --timestamp-pattern goes first
+    - "SERIAL-YYYYMMDDThhmmss"       # 123456789012345-20260806T025318.jpg
+    - "ami-mini-YYYYMMDDThhmmss"     # ami-mini-20250428T210338.jpg
+    - "YYYYMMDDThhmmss"              # anything else with a date-T-time
+  # Time zone and clock (local or UTC) depend on how each unit was set up.
+  # They belong to the deployment, not the unit: record them with each deployment.
+needs_mask: true                    # the ring light sits in a slightly different place in each deployment
+params:
+  images:
+    box_threshold: 0.2
+    max_crops_per_image: 100
