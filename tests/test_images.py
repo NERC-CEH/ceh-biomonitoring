@@ -204,3 +204,27 @@ def test_flatbug_outline_layout_is_read_correctly():
             return R()
     (row,) = nets.detect_flatbug(Fake(), "x.jpg")
     assert row[6] == [[10, 20], [50, 20], [50, 40], [10, 40]]
+
+
+def test_circle_masks_from_masks_json(tmp_path):
+    table = {"pembs-foxs-farm": {"image_size": [2592, 1944], "circles": [
+        {"label": "light housing", "x": 1207, "y": 649, "r": 316},
+        {"label": "left screw", "x": 872, "y": 649, "r": 55}]}}
+    f = tmp_path / "masks.json"
+    f.write_text(json.dumps(table))
+    m = F.load_mask(str(f))
+    assert isinstance(m, F.SiteMasks)
+    photo = m.for_photo("images/pembs-foxs-farm/123-20260714T230849.jpg")
+    assert photo.ignored((1150, 600, 1250, 700), 2592, 1944)          # centre in the light housing
+    assert not photo.ignored((100, 100, 200, 200), 2592, 1944)
+    assert photo.ignored((575, 300, 625, 350), 1296, 972)              # half-size photos: circles scale
+    assert m.for_photo("images/other-farm/x.jpg") is None
+    one = tmp_path / "one.json"
+    one.write_text(json.dumps(table["pembs-foxs-farm"]))
+    assert isinstance(F.load_mask(str(one)), F.CircleMask)
+    assert F.load_mask(str(f), site="pembs-foxs-farm").for_photo("anything/x.jpg") is not None
+
+
+def test_detector_precision_defaults_to_full():
+    p = pipelines.get("images")
+    assert p.defaults["detector_precision"] == "float32"

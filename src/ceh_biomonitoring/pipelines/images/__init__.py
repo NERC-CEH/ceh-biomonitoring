@@ -110,10 +110,12 @@ class Images(Pipeline):
         "detector_score_threshold": None,  # flat-bug's own cut-off (its default 0.2); lower finds fainter insects
         "detector_min_size": None,     # smallest insect flat-bug reports, in pixels (its default 32)
         "enhance_contrast": False,     # boost contrast for detection only (pale insects on a white sheet)
+        "detector_precision": "float32",  # float32 (best) or float16 (faster on a GPU, may miss faint insects)
         "max_crops_per_image": 100,    # keep the best boxes per photo (the rest are counted)
         "top_n": 5,                    # species guesses per crop
         "mask": "",                    # black-and-white image: black = ignore (see cehbio mask)
         "mask_overlap": 0.5,           # ignore a box when this much of it is in the black area
+        "mask_site": "",               # for a masks.json with several sites: which one (default: by folder)
         "filters": "",                 # YAML file(s) of your own rules (see docs/images.md)
         "save_crops": False,           # also save each crop as a .jpg
         "save_outlines": False,        # each insect's outline + area, length, width (for biomass)
@@ -156,7 +158,7 @@ class Images(Pipeline):
         ord_name = resolve(params.get("order_model"), "order", ml)
         species = params.get("species_model") or (species_model_for(params["region"], ml) if params.get("region") else "")
         key = (dev, det_name, bin_name, ord_name, species, params.get("detector_score_threshold"),
-               params.get("detector_min_size"))
+               params.get("detector_min_size"), params.get("detector_precision"))
         if self._loaded.get("key") == key:
             return self._loaded
         settings = Settings.load()
@@ -169,7 +171,8 @@ class Images(Pipeline):
             print(f"NOTE: the installed flat-bug offers a newer detector ({fb_default}) than this model list. "
                   f"Run `cehbio update` to get the newest model list.", flush=True)
         loaded["detector"] = nets.load_flatbug(get(det_name, "weights"), dev, params.get("detector_score_threshold"),
-                                               params.get("detector_min_size"))
+                                               params.get("detector_min_size"),
+                                               params.get("detector_precision") or "float32")
         loaded["binary"], loaded["binary_labels"], loaded["binary_transform"] = nets.load_binary(
             get(bin_name, "weights"), get(bin_name, "labels"), dev, ml["models"][bin_name].get("kind", ""))
         loaded["order"], loaded["order_labels"], loaded["order_table"] = nets.load_order(
@@ -204,7 +207,8 @@ class Images(Pipeline):
         dev, top_n = M["device"], int(params["top_n"])
         device_profile = devices.get(chunk["device"]) if chunk.get("device") else None
         pattern = chunk.get("timestamp_pattern")
-        mask = F.Mask(params["mask"], params["mask_overlap"]) if params.get("mask") else None
+        mask = F.load_mask(params.get("mask"), params["mask_overlap"], params.get("mask_site")
+                           or chunk.get("deployment_id"))
         rules = F.load_rules(params.get("filters"))
         thr, cap, bs = float(params["box_threshold"]), int(params["max_crops_per_image"]), int(params["batch_size"])
         crop_dir = workdir / "keep" / "crops"
@@ -234,7 +238,16 @@ class Images(Pipeline):
                 if params.get("enhance_contrast"):
                     det_input = nets.enhance(path, Path(path).with_name("_enhanced_" + Path(path).name))
                 overlay = overlay_dir / f"{Path(key).stem}_overlay.jpg" if params.get("save_overlays") else None
-                boxes = nets.detect_flatbug(M["detector"], det_input, overlay)
+                try:
+                    boxes = nets.detect_flatbug(M["detector"], det_input, overlay)
+                except Exception as first:  # noqa: BLE001 - the detector is stricter than PIL: retry a clean copy
+                    clean = Path(path).with_name("_resaved_" + Path(path).name)
+                    image.save(clean, quality=95)
+                    try:
+                        boxes = nets.detect_flatbug(M["detector"], clean, overlay)
+                        print(f"[note] {Path(key).name}: detector could not read it ({first}); used a re-saved copy")
+                    finally:
+                        clean.unlink(missing_ok=True)
                 if det_input != path:
                     Path(det_input).unlink(missing_ok=True)
             except Exception as e:  # noqa: BLE001
@@ -246,6 +259,7 @@ class Images(Pipeline):
             blur = float(cv2.Laplacian(np.array(image), cv2.CV_64F).var())
 
             # 1-3: threshold, mask, detection-stage filters, cap
+            photo_mask = mask.for_photo(key) if isinstance(mask, F.SiteMasks) else mask
             kept, n_masked, n_removed = [], 0, 0
             for i, (x0, y0, x1, y1, score, label, poly) in enumerate(boxes):
                 if score < thr:
@@ -254,7 +268,7 @@ class Images(Pipeline):
                         "box_score": score, "box_label": label, "filename": meta["filename"]}
                 if want_outlines:
                     crop.update(outline.columns(poly, ppm) if poly else {})
-                if mask is not None and mask.ignored((x0, y0, x1, y1), W, H):
+                if photo_mask is not None and photo_mask.ignored((x0, y0, x1, y1), W, H):
                     n_masked += 1
                     continue
                 remove, names = F.apply(rules, "detection", crop, W, H)
@@ -346,7 +360,7 @@ class Images(Pipeline):
         det = pd.DataFrame(rows, columns=cols)
         prov = {**M["provenance"], "box_threshold": thr, "max_crops_per_image": cap,
                 "detector_settings": {k: params.get(k) for k in ("detector_score_threshold", "detector_min_size",
-                                                                  "enhance_contrast")},
+                                                                  "enhance_contrast", "detector_precision")},
                 "order_input": params.get("order_input"),
                 "mask": getattr(mask, "path", None), "n_filters": len(rules), "notice": NOTICE}
         try:

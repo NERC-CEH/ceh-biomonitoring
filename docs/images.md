@@ -56,6 +56,8 @@ cehbio run images --folder E:/trap_photos --deployment farm1-2026 --device lepis
 | `detector_score_threshold` | flat-bug's (0.2) | flat-bug's own cut-off: lower finds fainter insects (see pale moths) |
 | `detector_min_size` | flat-bug's (32) | smallest insect reported, in pixels (square root of the box area) |
 | `enhance_contrast` | `false` | boost contrast for detection only (see pale moths) |
+| `detector_precision` | `float32` | `float16` is faster on a GPU but was seen to lose faint insects |
+| `mask_site` | | with a `masks.json` of several sites: which one (otherwise the photo's folder name) |
 | `detector`, `binary_model`, `order_model` | `latest` | which model for each step (`cehbio models`) |
 | `track_cost_threshold` | `1.0` | how similar two crops must be to join a track (lower = stricter) |
 | `device` | `auto` | `cuda` (GPU), `cpu` or `auto` |
@@ -90,6 +92,16 @@ Then use it:
 cehbio run images --folder E:/trap_photos --deployment farm1-2026 --device lepisense --set region=uk --set mask=masks/farm1.png
 ```
 
+**Or describe the mask as circles** in a `.json` file. That's handy for a ring light, whose housing and screws are round:
+
+```json
+{"image_size": [2592, 1944],
+ "circles": [{"label": "light housing", "x": 1207, "y": 649, "r": 316},
+             {"label": "left screw", "x": 872, "y": 649, "r": 55}]}
+```
+
+A box is ignored when its centre is inside a circle. One file can hold several sites, `{"site-a": {...}, "site-b": {...}}`. Each photo then uses the entry named after its folder, or the one you give with `--set mask_site=site-a`.
+
 Every photo records how many boxes the mask removed (`n_boxes_masked`).
 
 ## Insect outlines and biomass
@@ -115,7 +127,7 @@ These are the usual inputs for length-weight or area-weight equations to estimat
 
 ## Pale moths
 
-Pale moths on a white sheet have little contrast, so the detector may miss them or give them low scores. Three settings can help. **Test them on photos where you know pale moths are present before using them for real**, because each also finds more things that aren't insects:
+Pale moths on a white sheet have little contrast, so the detector may miss them or give them low scores. The detector already runs at full precision (`detector_precision=float32`): in UKCEH tests, half precision sometimes lost faint insects. Three more settings can help. **Test them on photos where you know pale moths are present before using them for real**, because each also finds more things that aren't insects:
 
 | Setting | Try | What it does |
 |---|---|---|

@@ -80,6 +80,49 @@ class Mask:
         return inside / ((x1 - x0) * (y1 - y0)) >= self.overlap
 
 
+class CircleMask:
+    """Circles to ignore, e.g. a ring light and its screws, as in a masks.json:
+        {"image_size": [2592, 1944], "circles": [{"label": "light housing", "x": 1207, "y": 649, "r": 316}, ...]}
+    A box is ignored when its centre is inside a circle. Circles are scaled if photos are a different size."""
+
+    def __init__(self, spec: dict, source: str = ""):
+        self.path = source
+        self.size = spec.get("image_size")
+        self.circles = spec["circles"]
+
+    def ignored(self, box, w: int, h: int) -> bool:
+        sx, sy = (w / self.size[0], h / self.size[1]) if self.size else (1.0, 1.0)
+        cx, cy = (box[0] + box[2]) / 2, (box[1] + box[3]) / 2
+        return any(((cx - c["x"] * sx) ** 2 + (cy - c["y"] * sy) ** 2) ** 0.5 <= c["r"] * max(sx, sy)
+                   for c in self.circles)
+
+
+class SiteMasks:
+    """A masks.json with one entry per site: the site is the photo's folder name, unless given."""
+
+    def __init__(self, table: dict, source: str, site: str | None = None):
+        self.path, self.table, self.site = source, table, site
+
+    def for_photo(self, key: str):
+        name = self.site if self.site in self.table else Path(str(key)).parent.name
+        spec = self.table.get(name)
+        return CircleMask(spec, self.path) if spec else None
+
+
+def load_mask(spec: str | None, overlap: float = 0.5, site: str | None = None):
+    """A mask image (black = ignore), a circles file, or a masks.json of several sites."""
+    if not spec:
+        return None
+    path = resolve(spec)
+    if path.suffix.lower() == ".json":
+        import json
+        data = json.loads(path.read_text(encoding="utf-8"))
+        if "circles" in data:
+            return CircleMask(data, str(path))
+        return SiteMasks(data, str(path), site)
+    return Mask(str(path), overlap)
+
+
 # --------------------------------------------------------------------------- rules
 def load_rules(spec) -> list[dict]:
     """spec: a YAML path, a list of paths, or a list of rules already loaded."""
