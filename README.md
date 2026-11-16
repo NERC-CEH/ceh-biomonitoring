@@ -7,7 +7,7 @@ Tools from the UK Centre for Ecology & Hydrology (UKCEH) for biodiversity monito
 
 | What | Tool | Command | Guide |
 |---|---|---|---|
-| Upload recordings or images to UKCEH | the AMI upload service | `cehbio upload` | [Upload guide](docs/upload-guide.md) |
+| Upload recordings or images to UKCEH | the UKCEH upload service | `cehbio upload` | [Upload guide](docs/upload-guide.md) |
 | Birds in audible recordings | **BirdNET** or **Perch** (your choice) | `cehbio run birds` | [Birds](docs/birds.md) |
 | Bats in ultrasonic recordings | **BatDetect2** | `cehbio run bats` | [Bats](docs/bats.md) |
 | Moths and other insects in light-trap images | detection and classification models for AMI traps and LepiSense | `cehbio run images` | *coming soon* |

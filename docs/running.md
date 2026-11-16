@@ -76,4 +76,6 @@ chmod 600 ~/.config/ceh-biomonitoring/credentials.json # only you can read it
 cehbio check --bucket <bucket>
 ```
 
+If you also upload data to UKCEH, you can add the upload login to the same file as `UKCEH_username` and `UKCEH_password`, and `cehbio upload` won't ask for it.
+
 Never put this file in a repository, share it, or paste it into an email or chat.

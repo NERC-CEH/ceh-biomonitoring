@@ -250,7 +250,7 @@ def build_parser() -> argparse.ArgumentParser:
     sub.add_parser("devices", parents=[common], help="list device profiles").set_defaults(func=cmd_devices)
 
     u = sub.add_parser("upload", parents=[common], help="upload recordings/images to UKCEH (asks step by step)",
-                       description="Upload files to UKCEH through the AMI upload service. With no options it asks "
+                       description="Upload files to UKCEH through the UKCEH upload service. With no options it asks "
                                    "each question; give options to run unattended. Run again to resume.")
     u.add_argument("--folder", help="folder with the files, e.g. the SD card")
     u.add_argument("--country", help="country as listed by the service, or Test")

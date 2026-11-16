@@ -11,7 +11,7 @@ src/ceh_biomonitoring/
   slurm.py            writes and submits Slurm array jobs
   devices.py          recorder profiles and file-name timestamps
   objectstore.py      optional S3 access
-  upload.py           cehbio upload (the AMI upload service)
+  upload.py           cehbio upload (the UKCEH upload service)
   pipelines/          one module per pipeline (base.py explains the interface)
   profiles/           machine settings (local, JASMIN)
   device_profiles/    recorder profiles

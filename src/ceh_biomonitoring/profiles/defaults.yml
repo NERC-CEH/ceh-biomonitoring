@@ -14,7 +14,7 @@ object_store:
 countries_file: ""          # empty = the table shipped with the package
 
 upload:
-  url: https://connect-apps.ceh.ac.uk/ami-data-upload/
+  url: https://connect-apps.ceh.ac.uk/ceh-biomonitoring-upload/
 
 chunking:
   files_per_chunk: 100

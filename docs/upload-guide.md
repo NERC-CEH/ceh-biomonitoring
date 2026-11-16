@@ -193,4 +193,4 @@ You can give all the answers in one command and skip the questions, for example:
 cehbio upload --name "Your Name" --country "United Kingdom" --deployment "Site name" --data-type snapshot_images --folder E:\ --yes
 ```
 
-The username and password are still asked for. To avoid typing them each time, set them as the environment variables `CEHBIO_UPLOAD_USER` and `CEHBIO_UPLOAD_PASSWORD`. Only do this on a computer that only you use. `cehbio upload --help` lists every option.
+The username and password are still asked for. To avoid typing them each time, on a computer that only you use, either set the environment variables `CEHBIO_UPLOAD_USER` and `CEHBIO_UPLOAD_PASSWORD`, or put them in your credentials file as `UKCEH_username` and `UKCEH_password` (see `credentials/credentials.example.json`). `cehbio upload --help` lists every option.

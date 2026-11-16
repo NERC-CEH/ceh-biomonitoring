@@ -1,4 +1,4 @@
-"""Upload recordings or images to UKCEH through the AMI upload service.
+"""Upload recordings or images to UKCEH through the UKCEH upload service.
 
 Partners never need object-store keys: they sign in to the upload service, which hands out a
 one-off upload link per file. Ported from the AMI interactive_upload.py (March 2026) with the same
@@ -24,7 +24,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from pathlib import Path
 
-DEFAULT_URL = "https://connect-apps.ceh.ac.uk/ami-data-upload/"   # the AMI upload service
+DEFAULT_URL = "https://connect-apps.ceh.ac.uk/ceh-biomonitoring-upload/"   # the UKCEH upload service
 MIN_BYTES = 10 * 1024                       # skip tiny/empty files
 SKIP_PARTS = ("$RECYCLE.BIN", ".Trashes", ".Trash-0", "System Volume Information")
 IMAGE_TYPES = ("snapshot_images",)
@@ -193,10 +193,27 @@ def _choose(prompt: str, options: list[str], given: str | None = None) -> str:
         print("Please type one of the numbers above.")
 
 
+def saved_login(settings) -> dict:
+    """The upload login from the credentials file, if there is one (UKCEH_username / UKCEH_password,
+    the same names the older pipelines use). Never required: partners are simply asked."""
+    import json
+    from .objectstore import credentials_path
+    path = credentials_path(settings)
+    try:
+        if os.name == "posix" and path.stat().st_mode & 0o044:
+            print(f"Not using the login in {path}: other people can read it (fix with chmod 600 {path}).")
+            return {}
+        return json.loads(path.read_text(encoding="utf-8-sig"))
+    except (OSError, ValueError):
+        return {}
+
+
 def run(args, settings) -> None:
-    url = settings.get("upload.url") or DEFAULT_URL
-    user = os.environ.get("CEHBIO_UPLOAD_USER") or _ask("Upload service username")
-    pw = os.environ.get("CEHBIO_UPLOAD_PASSWORD") or getpass.getpass("Upload service password (hidden): ")
+    saved = saved_login(settings)
+    url = saved.get("UPLOAD_URL") or settings.get("upload.url") or DEFAULT_URL
+    user = os.environ.get("CEHBIO_UPLOAD_USER") or saved.get("UKCEH_username") or _ask("Upload service username")
+    pw = (os.environ.get("CEHBIO_UPLOAD_PASSWORD") or saved.get("UKCEH_password")
+          or getpass.getpass("Upload service password (hidden): "))
     svc = UploadService(url, user, pw)
     print("Fetching the list of deployments...")
     deps = [d for d in svc.deployments() if d.get("status") == "active"]

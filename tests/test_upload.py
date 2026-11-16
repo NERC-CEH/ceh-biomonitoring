@@ -92,3 +92,16 @@ def test_dragged_folder_quotes_are_removed():
     from ceh_biomonitoring.upload import clean_path
     assert str(clean_path('  "C:/My Data/site 1"  ')) == str(Path("C:/My Data/site 1"))
     assert str(clean_path("'/data/site'")) == str(Path("/data/site"))
+
+
+def test_login_read_from_credentials_file(tmp_path, monkeypatch):
+    import json, os
+    f = tmp_path / "credentials.json"
+    f.write_text(json.dumps({"UKCEH_username": "u", "UKCEH_password": "p", "UPLOAD_URL": "https://x/"}))
+    if os.name == "posix":
+        f.chmod(0o600)
+    monkeypatch.setenv("CEHBIO_CREDENTIALS", str(f))
+    s = Settings.load(profile="local", settings_file=tmp_path / "none.yml")
+    assert upload.saved_login(s)["UKCEH_username"] == "u"
+    monkeypatch.setenv("CEHBIO_CREDENTIALS", str(tmp_path / "missing.json"))
+    assert upload.saved_login(s) == {}
