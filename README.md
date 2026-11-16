@@ -31,7 +31,9 @@ conda activate ceh-biomonitoring
 cehbio pipelines             # what is installed
 ```
 
-To add another pipeline later, run `./install.sh <name>` again. Rerunning it also updates everything to the newest model releases.
+To add another pipeline later, run `./install.sh <name>` again.
+
+**Always on the newest models:** run `cehbio update` now and then. It gets the newest code, model lists, packages and models for every pipeline you have installed (BirdNET, Perch, BatDetect2 and the image models). `cehbio versions` shows what you're using, and every result records the exact versions that made it.
 
 **On Windows**, in the **Miniforge Prompt**:
 
@@ -66,7 +68,8 @@ Then see:
 | **BirdNET** (model and location filter) | CC BY-NC-SA 4.0 | **No, non-commercial only** |
 | Perch v2 | Apache 2.0 | Yes |
 | BatDetect2 | see its repository | check |
-| Image models (flat-bug, moth/non-moth, order, species) | see [Images](docs/images.md#models-and-credits) | check each |
+| Image models: flat-bug, moth/non-moth, order | see [Images](docs/images.md#models-and-credits) | check each |
+| Image models: moth species (Turing / AMBER) | CC BY-NC 4.0 | **No, non-commercial only** |
 
 > The image models are **still in development and far from perfect**: treat their results as suggestions, and have identifications checked by an expert.
 

@@ -36,14 +36,28 @@ def model_list() -> dict:
     return load_list(MODEL_LIST)
 
 
-def species_model_for(region: str, models: dict | None = None) -> str:
+def latest(stage: str, region: str | None = None, models: dict | None = None) -> str:
+    """The newest model (by release date) for a step, and for species, a region."""
     models = (models or model_list())["models"]
-    region = region.strip().lower().replace("_", "-").replace(" ", "-")
-    hits = [n for n, m in models.items() if m.get("stage") == "species" and m.get("region") == region]
+    hits = [(str(m.get("released", "")), n) for n, m in models.items()
+            if m.get("stage") == stage and (region is None or m.get("region") == region)]
     if not hits:
-        regions = sorted({m["region"] for m in models.values() if m.get("stage") == "species"})
+        raise SystemExit(f"No {stage} model" + (f" for region '{region}'" if region else ""))
+    return max(hits)[1]
+
+
+def resolve(name: str, stage: str, models: dict | None = None) -> str:
+    """'latest' (or empty) means the newest model for that step."""
+    return latest(stage, models=models) if name in ("", "latest", None) else name
+
+
+def species_model_for(region: str, models: dict | None = None) -> str:
+    models = models or model_list()
+    region = region.strip().lower().replace("_", "-").replace(" ", "-")
+    regions = sorted({m["region"] for m in models["models"].values() if m.get("stage") == "species"})
+    if region not in regions:
         raise SystemExit(f"No species model for region '{region}'. Regions: {', '.join(regions)}")
-    return sorted(hits)[-1]
+    return latest("species", region, models)
 
 
 # ----------------------------------------------------------------------------- dates and nights
@@ -87,16 +101,24 @@ class Images(Pipeline):
     defaults = {
         "region": "",                  # species model for this region, e.g. uk, thailand (cehbio models)
         "species_model": "",           # or name a species model exactly
-        "detector": "insect-detector-flatbug-m",
-        "binary_model": "moth-vs-nonmoth-v1",
-        "order_model": "insect-order-v1",
+        "detector": "latest",          # latest = the newest model for each step (cehbio models)
+        "binary_model": "latest",
+        "order_model": "latest",
+        "order_input": "native",       # native = as the order model was trained (128 px, 0-1);
+                                       # amber-300 = as amber-inferences did, to compare with old results
         "box_threshold": 0.2,          # detector score below this: not an insect
+        "detector_score_threshold": None,  # flat-bug's own cut-off (its default 0.2); lower finds fainter insects
+        "detector_min_size": None,     # smallest insect flat-bug reports, in pixels (its default 32)
+        "enhance_contrast": False,     # boost contrast for detection only (pale insects on a white sheet)
         "max_crops_per_image": 100,    # keep the best boxes per photo (the rest are counted)
         "top_n": 5,                    # species guesses per crop
         "mask": "",                    # black-and-white image: black = ignore (see cehbio mask)
         "mask_overlap": 0.5,           # ignore a box when this much of it is in the black area
         "filters": "",                 # YAML file(s) of your own rules (see docs/images.md)
         "save_crops": False,           # also save each crop as a .jpg
+        "save_outlines": False,        # each insect's outline + area, length, width (for biomass)
+        "save_overlays": False,        # flat-bug's overlay image of each photo (outlines drawn on it)
+        "pixels_per_mm": None,         # camera scale: also give outline sizes in mm / mm²
         "track_cost_threshold": 1.0,   # link crops between photos at or below this cost
         "batch_size": 64,
         "device": "auto",              # auto | cuda | cpu
@@ -128,25 +150,36 @@ class Images(Pipeline):
         dev = ("cuda" if torch.cuda.is_available() else "cpu") if dev == "auto" else dev
         if dev == "cuda":
             dev = "cuda:0"      # flat-bug compares device names exactly
-        species = params.get("species_model") or (species_model_for(params["region"]) if params.get("region") else "")
-        key = (dev, params["detector"], params["binary_model"], params["order_model"], species)
+        ml = model_list()
+        det_name = resolve(params.get("detector"), "detector", ml)
+        bin_name = resolve(params.get("binary_model"), "binary", ml)
+        ord_name = resolve(params.get("order_model"), "order", ml)
+        species = params.get("species_model") or (species_model_for(params["region"], ml) if params.get("region") else "")
+        key = (dev, det_name, bin_name, ord_name, species, params.get("detector_score_threshold"),
+               params.get("detector_min_size"))
         if self._loaded.get("key") == key:
             return self._loaded
-        settings, ml = Settings.load(), model_list()
+        settings = Settings.load()
         get = lambda m, part: modelstore.fetch(settings, ml, m, part)  # noqa: E731
-        print(f"Loading models on {dev} ...", flush=True)
+        print(f"Loading models on {dev}: {det_name}, {bin_name}, {ord_name}, {species or 'no species model'}",
+              flush=True)
         loaded = {"key": key, "device": dev}
-        loaded["detector"] = nets.load_flatbug(get(params["detector"], "weights"), dev)
-        loaded["binary"], loaded["binary_labels"] = nets.load_binary(get(params["binary_model"], "weights"),
-                                                                      get(params["binary_model"], "labels"), dev)
-        loaded["order"], loaded["order_labels"] = nets.load_order(get(params["order_model"], "weights"),
-                                                                   get(params["order_model"], "labels"), dev)
+        fb_default = nets.flatbug_default_model()
+        if fb_default not in {f["name"] for m in ml["models"].values() for f in m["files"].values()}:
+            print(f"NOTE: the installed flat-bug offers a newer detector ({fb_default}) than this model list. "
+                  f"Run `cehbio update` to get the newest model list.", flush=True)
+        loaded["detector"] = nets.load_flatbug(get(det_name, "weights"), dev, params.get("detector_score_threshold"),
+                                               params.get("detector_min_size"))
+        loaded["binary"], loaded["binary_labels"], loaded["binary_transform"] = nets.load_binary(
+            get(bin_name, "weights"), get(bin_name, "labels"), dev, ml["models"][bin_name].get("kind", ""))
+        loaded["order"], loaded["order_labels"], loaded["order_table"] = nets.load_order(
+            get(ord_name, "weights"), get(ord_name, "labels"), dev)
         loaded["species"], loaded["species_labels"] = (
             nets.load_species(get(species, "weights"), get(species, "labels"), dev) if species else (None, []))
         loaded["provenance"] = {
-            "detector": modelstore.describe(ml, params["detector"]),
-            "binary": modelstore.describe(ml, params["binary_model"]),
-            "order": modelstore.describe(ml, params["order_model"]),
+            "detector": modelstore.describe(ml, det_name),
+            "binary": modelstore.describe(ml, bin_name),
+            "order": modelstore.describe(ml, ord_name),
             "species": modelstore.describe(ml, species) if species else None,
             "device": dev,
         }
@@ -163,7 +196,7 @@ class Images(Pipeline):
         from PIL import Image
 
         from . import filters as F
-        from . import nets, tracking
+        from . import nets, outline, tracking
         from ... import devices
 
         print(NOTICE, flush=True)
@@ -175,6 +208,10 @@ class Images(Pipeline):
         rules = F.load_rules(params.get("filters"))
         thr, cap, bs = float(params["box_threshold"]), int(params["max_crops_per_image"]), int(params["batch_size"])
         crop_dir = workdir / "keep" / "crops"
+        overlay_dir = workdir / "keep" / "overlays"
+        if params.get("save_overlays"):
+            overlay_dir.mkdir(parents=True, exist_ok=True)
+        want_outlines, ppm = bool(params.get("save_outlines")), params.get("pixels_per_mm")
         species_cols = ([f"regional_species_rank_{i + 1}_name" for i in range(top_n)]
                         + [f"regional_species_rank_{i + 1}_confidence" for i in range(top_n)])
         now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -193,7 +230,13 @@ class Images(Pipeline):
                     "recording_session": recording_session(dt)}
             try:
                 image = Image.open(path).convert("RGB")
-                boxes = nets.detect_flatbug(M["detector"], path)
+                det_input = path
+                if params.get("enhance_contrast"):
+                    det_input = nets.enhance(path, Path(path).with_name("_enhanced_" + Path(path).name))
+                overlay = overlay_dir / f"{Path(key).stem}_overlay.jpg" if params.get("save_overlays") else None
+                boxes = nets.detect_flatbug(M["detector"], det_input, overlay)
+                if det_input != path:
+                    Path(det_input).unlink(missing_ok=True)
             except Exception as e:  # noqa: BLE001
                 failed.append({**{k: meta[k] for k in ("source_key", "filename", "image_datetime")},
                                "status": "failed", "error": f"{type(e).__name__}: {e}"})
@@ -204,11 +247,13 @@ class Images(Pipeline):
 
             # 1-3: threshold, mask, detection-stage filters, cap
             kept, n_masked, n_removed = [], 0, 0
-            for i, (x0, y0, x1, y1, score, label) in enumerate(boxes):
+            for i, (x0, y0, x1, y1, score, label, poly) in enumerate(boxes):
                 if score < thr:
                     continue
                 crop = {"crop_status": f"crop_{i + 1}", "x_min": x0, "y_min": y0, "x_max": x1, "y_max": y1,
                         "box_score": score, "box_label": label, "filename": meta["filename"]}
+                if want_outlines:
+                    crop.update(outline.columns(poly, ppm) if poly else {})
                 if mask is not None and mask.ignored((x0, y0, x1, y1), W, H):
                     n_masked += 1
                     continue
@@ -230,15 +275,19 @@ class Images(Pipeline):
             if kept:
                 pil_crops = [image.crop((c["x_min"], c["y_min"], c["x_max"], c["y_max"])) for c in kept]
                 tensors = torch.stack([nets.CROP_TRANSFORM(p) for p in pil_crops])
+                btf = M["binary_transform"]
+                bin_tensors = torch.stack([btf(p) for p in pil_crops]) if btf else tensors
+                ord_tensors = (tensors if params.get("order_input") == "amber-300"
+                               else torch.stack([nets.order_transform(p) for p in pil_crops]))
                 for s in range(0, len(kept), bs):
                     batch = tensors[s:s + bs].to(dev)
-                    pb, po = nets.classify(M["binary"], batch), nets.classify(M["order"], batch)
+                    pb = nets.classify(M["binary"], bin_tensors[s:s + bs].to(dev))
+                    po = nets.order_scores(M["order"], ord_tensors[s:s + bs].to(dev), M["order_table"])
                     for j in range(len(batch)):
                         c = kept[s + j]
                         c["class_name"] = M["binary_labels"][int(pb[j].argmax())]
                         c["class_confidence"] = float(pb[j].max())
-                        c["order_name"] = M["order_labels"][int(po[j].argmax())]
-                        c["order_confidence"] = float(po[j].max())
+                        c.update(po[j])
                     if M["species"] is not None:
                         want = [j for j in range(len(batch)) if kept[s + j]["class_name"] == "moth"
                                 or "Lepidoptera" in kept[s + j]["order_name"]]
@@ -289,10 +338,16 @@ class Images(Pipeline):
                  "deployment_id", "latitude", "longitude", "analysis_datetime", "recording_session", "image_bluriness",
                  "crop_status", "crop_bluriness", "crop_area", "cropped_image_path", "box_score", "box_label",
                  "x_min", "y_min", "x_max", "y_max", "class_name", "class_confidence", "order_name",
-                 "order_confidence"] + species_cols + tracking.MATCH_COLUMNS
-                + ["filters", "n_boxes_detected", "n_boxes_masked", "n_boxes_removed_by_filters", "n_boxes_over_cap"])
+                 "order_confidence", "order_score", "order_sure"] + species_cols + tracking.MATCH_COLUMNS
+                + ["filters", "n_boxes_detected", "n_boxes_masked", "n_boxes_removed_by_filters", "n_boxes_over_cap"]
+                + (["outline_area_px", "outline_length_px", "outline_width_px"]
+                   + (["outline_area_mm2", "outline_length_mm", "outline_width_mm"] if ppm else []) + ["outline"]
+                   if want_outlines else []))
         det = pd.DataFrame(rows, columns=cols)
         prov = {**M["provenance"], "box_threshold": thr, "max_crops_per_image": cap,
+                "detector_settings": {k: params.get(k) for k in ("detector_score_threshold", "detector_min_size",
+                                                                  "enhance_contrast")},
+                "order_input": params.get("order_input"),
                 "mask": getattr(mask, "path", None), "n_filters": len(rules), "notice": NOTICE}
         try:
             from importlib.metadata import version

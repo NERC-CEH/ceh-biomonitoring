@@ -234,22 +234,27 @@ def cmd_combine(args):
 
 def cmd_models(args):
     from . import modelstore
-    from .pipelines.images import MODEL_LIST, NOTICE
+    from .pipelines.images import MODEL_LIST, NOTICE, latest
     ml = modelstore.load_list(MODEL_LIST)
     s = _settings(args)
     print(NOTICE)
+    print("* = newest: used unless you choose another. Keep up to date with: cehbio update")
     print()
-    for stage in ("detector", "binary", "order", "species"):
-        print({"detector": "Finding insects", "binary": "Moth or not", "order": "Order",
-               "species": "Species (choose with --set region=...)"}[stage])
+    newest = {latest(st, models=ml) for st in ("detector", "binary", "order")}
+    newest |= {latest("species", m["region"], ml) for m in ml["models"].values() if m.get("stage") == "species"}
+    titles = {"detector": "Finding insects", "binary": "Moth or not", "order": "Order",
+              "species": "Species (choose with --set region=...)"}
+    for stage, title in titles.items():
+        print(title)
         for name, m in ml["models"].items():
             if m.get("stage") != stage:
                 continue
             w = m["files"]["weights"]
-            here = any((d / w["name"]).exists() for d in [modelstore.cache_dir(s)]) or any(
+            here = (modelstore.cache_dir(s) / (w.get("asset") or w["name"])).exists() or any(
                 modelstore._local_index(d).get(w["name"]) for d in modelstore.search_dirs(s))
             region = f"region={m['region']:<13}" if m.get("region") else " " * 20
-            print(f"  {name:30s} {region} {m.get('by', '')[:45]:45s} {'(on this machine)' if here else ''}")
+            print(f" {'*' if name in newest else ' '} {name:30s} {region} {str(m.get('released', '')):10s} "
+                  f"{m.get('licence', '')[:30]:30s} {'(on this machine)' if here else ''}")
         print()
 
 
@@ -318,6 +323,14 @@ def build_parser() -> argparse.ArgumentParser:
 
     mo = sub.add_parser("models", parents=[common], help="list image models (detector, moth/non-moth, order, species)")
     mo.set_defaults(func=cmd_models)
+
+    up = sub.add_parser("update", parents=[common], help="get the newest code, packages and models for every pipeline")
+    up.add_argument("--no-pull", action="store_true", help="don't git pull, just upgrade packages and models")
+    up.add_argument("--no-models", action="store_true", help="don't fetch models now (they download when first used)")
+    up.set_defaults(func=lambda a: __import__("ceh_biomonitoring.update", fromlist=["update"]).update(
+        pull=not a.no_pull, fetch_models=not a.no_models))
+    sub.add_parser("versions", parents=[common], help="package and model versions in use").set_defaults(
+        func=lambda a: __import__("ceh_biomonitoring.update", fromlist=["show_versions"]).show_versions())
 
     from .pipelines.images.masktool import add_command as _add_mask
     _add_mask(sub, common)

@@ -10,6 +10,8 @@ Finds bat echolocation calls in ultrasonic recordings (e.g. AudioMoth or Song Me
 
 (On Windows, use `[bats]` with the `pip install` line in the [README](../README.md#install).)
 
+**Keep it on the newest models:** `cehbio update` now and then.
+
 ## Run
 
 ```bash

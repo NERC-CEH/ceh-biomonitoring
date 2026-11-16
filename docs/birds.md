@@ -20,6 +20,8 @@ Finds bird calls and songs in audible recordings (e.g. AudioMoth or Song Meter, 
 
 The first Perch run downloads the model (about 400 MB) from Kaggle. After that it is reused.
 
+**Keep it on the newest models:** `cehbio update` now and then.
+
 ## Run
 
 ```bash

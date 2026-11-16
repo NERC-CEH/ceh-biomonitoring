@@ -161,3 +161,46 @@ def test_after_combine_builds_analysis_ready_and_tracks(tmp_path):
     ready = pd.read_parquet(tmp_path / "dep1_analysis_ready.parquet")
     assert len(ready) == 3 and (ready["crop_status"] == T.NO_DETECTION).sum() == 1
     assert (tmp_path / "dep1_tracks.parquet").exists()
+
+
+def test_newest_model_is_the_default():
+    from ceh_biomonitoring.pipelines.images import latest, resolve
+    assert latest("detector") == "insect-detector-flatbug-m-v2"
+    assert latest("order") == "insect-order-v2" and latest("binary") == "moth-vs-nonmoth-v2"
+    assert resolve("latest", "order") == "insect-order-v2" and resolve("insect-order-v1", "order") == "insect-order-v1"
+    ml = {"models": {"a-v1": {"stage": "species", "region": "x", "released": "2024-01-01"},
+                     "a-v10": {"stage": "species", "region": "x", "released": "2026-01-01"},
+                     "a-v9": {"stage": "species", "region": "x", "released": "2025-01-01"}}}
+    assert species_model_for("x", ml) == "a-v10"                 # by release date, not by name
+    for m in model_list()["models"].values():
+        if m["stage"] == "species":
+            assert m["licence"].startswith("CC BY-NC 4.0")
+
+
+def test_outline_measurements():
+    from ceh_biomonitoring.pipelines.images import outline
+    rect = [(0, 0), (40, 0), (40, 10), (0, 10)]
+    m = outline.measure(rect)
+    assert m["outline_area_px"] == pytest.approx(400) and m["outline_length_px"] == pytest.approx(40)
+    assert m["outline_width_px"] == pytest.approx(10)
+    c, s_ = np.cos(np.pi / 6), np.sin(np.pi / 6)                 # same insect, turned 30 degrees
+    rot = [(x * c - y * s_, x * s_ + y * c) for x, y in rect]
+    m2 = outline.measure(rot)
+    assert m2["outline_length_px"] == pytest.approx(40) and m2["outline_width_px"] == pytest.approx(10)
+    cols = outline.columns(rect, pixels_per_mm=10)
+    assert cols["outline_length_mm"] == pytest.approx(4) and cols["outline_area_mm2"] == pytest.approx(4)
+    assert json.loads(cols["outline"])[1] == [40, 0]
+
+
+def test_flatbug_outline_layout_is_read_correctly():
+    torch = pytest.importorskip("torch")
+    from ceh_biomonitoring.pipelines.images import nets
+
+    class Fake:
+        def __call__(self, path):
+            class R:
+                json_data = {"boxes": [[10, 20, 50, 40]], "confs": [0.9], "classes": [0],
+                             "contours": [torch.tensor([[10.0, 50, 50, 10], [20.0, 20, 40, 40]])]}
+            return R()
+    (row,) = nets.detect_flatbug(Fake(), "x.jpg")
+    assert row[6] == [[10, 20], [50, 20], [50, 40], [10, 40]]

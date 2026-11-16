@@ -24,6 +24,8 @@ Photos are processed **one night at a time, in time order**. Photos taken before
 
 It needs PyTorch. A GPU makes it much faster (on JASMIN it runs on the GPU nodes automatically), but it also works on a laptop for small tests. The models (up to about 700 MB for one region) download the first time they're used and are checked against their published checksums.
 
+**The newest models are always used**, unless you choose one: run `cehbio models` to see them (`*` marks the newest). Run `cehbio update` now and then: it gets the newest model list, packages and models. Every result records exactly which models and versions made it.
+
 ## Run
 
 ```bash
@@ -48,6 +50,13 @@ cehbio run images --folder E:/trap_photos --deployment farm1-2026 --device lepis
 | `mask_overlap` | `0.5` | ignore a box when at least this much of it is in the masked area |
 | `filters` | | your filter file(s) (see below) |
 | `save_crops` | `false` | also save every crop as a `.jpg` |
+| `save_outlines` | `false` | each insect's outline, area, length and width, for biomass (see below) |
+| `save_overlays` | `false` | flat-bug's overlay of each photo, with every insect's outline drawn on |
+| `pixels_per_mm` | | the camera's scale: outline sizes also in mm and mm² |
+| `detector_score_threshold` | flat-bug's (0.2) | flat-bug's own cut-off: lower finds fainter insects (see pale moths) |
+| `detector_min_size` | flat-bug's (32) | smallest insect reported, in pixels (square root of the box area) |
+| `enhance_contrast` | `false` | boost contrast for detection only (see pale moths) |
+| `detector`, `binary_model`, `order_model` | `latest` | which model for each step (`cehbio models`) |
 | `track_cost_threshold` | `1.0` | how similar two crops must be to join a track (lower = stricter) |
 | `device` | `auto` | `cuda` (GPU), `cpu` or `auto` |
 | `deployment_name`, `lat`, `lon` | | written into every row, if you give them |
@@ -82,6 +91,39 @@ cehbio run images --folder E:/trap_photos --deployment farm1-2026 --device lepis
 ```
 
 Every photo records how many boxes the mask removed (`n_boxes_masked`).
+
+## Insect outlines and biomass
+
+flat-bug outlines every insect, not just a box around it. Switch on `save_outlines` to keep them:
+
+```bash
+cehbio run images ... --set save_outlines=true --set save_overlays=true --set pixels_per_mm=12.5
+```
+
+Every crop then gets:
+
+| Column | Meaning |
+|---|---|
+| `outline_area_px` (`_mm2`) | area inside the outline |
+| `outline_length_px` (`_mm`) | body length: the long side of the smallest rectangle around the outline, whichever way the insect points |
+| `outline_width_px` (`_mm`) | the short side of that rectangle |
+| `outline` | the outline's points, `[[x, y], ...]`, in photo pixels |
+
+These are the usual inputs for length-weight or area-weight equations to estimate biomass. `save_overlays` saves flat-bug's own picture of each photo, with the outlines drawn on, to `chunks/*_keep/overlays/`, so you can check them.
+
+**`pixels_per_mm`:** photograph a ruler on the sheet with the same camera set-up, and divide a measured distance in pixels by its length in mm.
+
+## Pale moths
+
+Pale moths on a white sheet have little contrast, so the detector may miss them or give them low scores. Three settings can help. **Test them on photos where you know pale moths are present before using them for real**, because each also finds more things that aren't insects:
+
+| Setting | Try | What it does |
+|---|---|---|
+| `detector_score_threshold` + `box_threshold` | `0.1` and `0.1` | keeps fainter, lower-scoring detections (both cut-offs must be lowered) |
+| `detector_min_size` | `16` | reports smaller insects (flat-bug normally ignores anything under 32 px across) |
+| `enhance_contrast` | `true` | the detector sees a contrast-boosted copy of each photo; crops and classification still use the original |
+
+Compare `n_boxes_detected` per photo with and without them, and look at the overlays (`save_overlays=true`).
 
 ## Your own filters, e.g. geckos
 
@@ -161,9 +203,11 @@ The main columns:
 
 | Step | Model | By | Licence |
 |---|---|---|---|
-| Finding insects | flat-bug M | Svenning, Geissmann et al. ([flat-bug](https://github.com/darsa-group/flat-bug)) | MIT |
-| Moth or not | moth-vs-nonmoth-v1 | Mila / Rolnick lab, AMI project ([ami-data-companion](https://github.com/RolnickLab/ami-data-companion)) | see source |
-| Order | insect-order-v1 | Aarhus University, Bjerge et al. 2025 ([MCC24-trap](https://github.com/kimbjerge/MCC24-trap)), via AMBER | to be confirmed |
-| Species | moth-species-*region*-v*N* | The Alan Turing Institute, for the AMBER project | open access, licence to be confirmed |
+| Finding insects | insect-detector-flatbug-m-v2 (July 2026) | Svenning, Geissmann et al. ([flat-bug](https://github.com/darsa-group/flat-bug)) | MIT |
+| Moth or not | moth-vs-nonmoth-v2 (April 2024) | Mila / Rolnick lab, AMI project ([ami-data-companion](https://github.com/RolnickLab/ami-data-companion)) | see source |
+| Order | insect-order-v2 (10 May 2024) | Aarhus University, Bjerge et al. 2025 ([MCC24-trap](https://github.com/kimbjerge/MCC24-trap)) | see source |
+| Species | moth-species-*region*-v*N* | The Alan Turing Institute, for the AMBER project | **CC BY-NC 4.0: research and other non-commercial use only** |
+
+Earlier models used for AMBER / INSPIRE results up to 2026 stay available by name (`insect-detector-flatbug-m`, `moth-vs-nonmoth-v1`, `insect-order-v1`) to reproduce or compare with older results.
 
 The pipeline's processing follows [amber-inferences](https://github.com/AMI-system/amber-inferences) (MIT), so results match earlier UKCEH outputs. If you publish results, please cite the models you used. Their details and checksums are recorded in each chunk's `_summary.json`.
