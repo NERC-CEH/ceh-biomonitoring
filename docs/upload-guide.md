@@ -161,6 +161,15 @@ You're probably using the ordinary Command Prompt. Use the **Miniforge Prompt** 
 **"cehbio is not recognized" or "command not found".**
 The environment isn't active. Type `conda activate ceh-biomonitoring` first. You need to do this every time you open a new window.
 
+**`cehbio` is blocked by my computer's security.**
+Some organisations block programs they don't recognise. Use this instead, which does exactly the same:
+
+```
+python -m ceh_biomonitoring upload
+```
+
+If that is blocked too, ask your IT team, or email us.
+
 **How do I return to the upload tool after closing the window?**
 You don't need to set anything up again. Start from [Part 2](#part-2-upload-your-data-every-time).
 
