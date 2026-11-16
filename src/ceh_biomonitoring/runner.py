@@ -173,5 +173,8 @@ def combine(settings: Settings, pipeline: Pipeline, country: str, deployment: st
         "n_detections": int(len(det)),
         "complete": not missing,
     }
+    if len(det) or len(files):
+        qa.update(pipeline.after_combine(ddir, deployment, det, files,
+                                         load_run_params(settings, pipeline, country, deployment)) or {})
     write_json(ddir / f"{deployment}_qa.json", qa)
     return qa

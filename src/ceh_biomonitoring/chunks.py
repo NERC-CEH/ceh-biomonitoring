@@ -9,7 +9,6 @@ so existing chunk files still work.
 from __future__ import annotations
 
 import json
-import math
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -33,15 +32,40 @@ def manifest_path(base: Path, deployment: str) -> Path:
     return base / "keys" / "manifests" / deployment / "manifest.json"
 
 
+def pack(groups: list[list[str]], size: int) -> list[list[str]]:
+    """Put whole groups (e.g. nights) into chunks of up to `size` files, in order.
+    A group bigger than `size` is split, as nothing else is possible."""
+    chunks_, cur = [], []
+    for g in groups:
+        if len(g) > size:
+            if cur:
+                chunks_.append(cur)
+                cur = []
+            chunks_.extend(g[i:i + size] for i in range(0, len(g), size))
+            continue
+        if cur and len(cur) + len(g) > size:
+            chunks_.append(cur)
+            cur = []
+        cur = cur + list(g)
+    if cur:
+        chunks_.append(cur)
+    return chunks_
+
+
 def write_chunks(base: Path, country: dict, deployment: str, keys: list[str], files_per_chunk: int,
-                 key_field: str, data_type: str, extra: dict | None = None) -> list[Path]:
+                 key_field: str, data_type: str, extra: dict | None = None,
+                 groups: list[list[str]] | None = None) -> list[Path]:
     out = chunk_dir(base, deployment)
     if out.exists() and any(out.glob("*.json")):
         raise SystemExit(f"Chunks already exist in {out}. Delete them first if you want to rebuild.")
-    n = math.ceil(len(keys) / files_per_chunk) if keys else 0
+    if groups is not None:
+        parts = pack(groups, files_per_chunk)
+        keys = [k for part in parts for k in part]
+    else:
+        parts = [keys[i:i + files_per_chunk] for i in range(0, len(keys), files_per_chunk)]
+    n = len(parts)
     paths = []
-    for i in range(n):
-        part = keys[i * files_per_chunk:(i + 1) * files_per_chunk]
+    for i, part in enumerate(parts):
         p = out / f"{deployment}_chunk_{i + 1:05d}.json"
         write_json(p, {
             "country_name": country["country_name"], "country_folder": country["country_folder"],

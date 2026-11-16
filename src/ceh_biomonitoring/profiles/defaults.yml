@@ -19,6 +19,12 @@ upload:
 chunking:
   files_per_chunk: 100
 
+models:
+  cache_dir: ~/.cache/ceh-biomonitoring/models   # downloaded model files are kept here
+  search_dirs: []           # folders that already hold model files (searched by file name first)
+
+pipeline_defaults: {}       # e.g. images: {box_threshold: 0.2}: defaults for a team or machine
+
 slurm:
   enabled: false
   account: ""

@@ -42,8 +42,9 @@ def _device(pipeline, args) -> dict | None:
 
 
 def _params(pipeline, args, device: dict | None = None) -> dict:
-    """pipeline defaults < device < project config < --set"""
-    over: dict = devices.pipeline_params(device, pipeline.name) if device else {}
+    """pipeline defaults < machine/team settings (pipeline_defaults.<name>) < device < --config < --set"""
+    over: dict = dict((_settings(args).get(f"pipeline_defaults.{pipeline.name}") or {}))
+    over.update(devices.pipeline_params(device, pipeline.name) if device else {})
     if getattr(args, "config", None):
         cfg = yaml.safe_load(Path(args.config).read_text()) or {}
         over.update(cfg.get(pipeline.name, cfg))
@@ -159,9 +160,10 @@ def _make_keys(s, p, country, deployment, args, c, device=None) -> list[Path]:
         else:
             print(f"WARNING: could not read a date/time from {Path(keys[0]).name}. "
                   f"Give the pattern with --timestamp-pattern, e.g. \"SERIAL-YYYYMMDDThhmmss\".")
-    per = args.files_per_chunk or s.get("chunking.files_per_chunk", 100)
-    paths = chunks.write_chunks(base, c, deployment, keys, per, p.key_field, data_type, extra)
-    print(f"{len(keys)} files -> {len(paths)} chunks")
+    per = args.files_per_chunk or p.files_per_chunk or s.get("chunking.files_per_chunk", 100)
+    groups = p.group_files(keys, device, extra.get("timestamp_pattern"))
+    paths = chunks.write_chunks(base, c, deployment, keys, per, p.key_field, data_type, extra, groups=groups)
+    print(f"{len(keys)} files -> {len(paths)} chunks" + (f" ({len(groups)} nights, never split)" if groups else ""))
     return paths
 
 
@@ -190,7 +192,12 @@ def cmd_run(args):
         return
     job = slurm.submit(script)
     print(f"Submitted Slurm job {job}: {len(paths)} tasks. Logs: {job_dir / 'logs'}")
-    place = "" if c.get("bucket_code") == "local" else f" --country {args.country}" if not args.bucket else f" --bucket {args.bucket}"
+    if c.get("bucket_code") == "local":
+        place = ""
+    elif args.bucket:
+        place = f" --bucket {args.bucket}" + (f" --country {args.country}" if args.country != args.bucket else "")
+    else:
+        place = f" --country {args.country}"
     print(f"Check progress:  cehbio status {p.name}{place} --deployment {args.deployment}")
     print(f"When finished:   cehbio combine {p.name}{place} --deployment {args.deployment}")
 
@@ -223,6 +230,27 @@ def cmd_combine(args):
     print(json.dumps(qa, indent=2))
     if not qa["complete"]:
         print(f"\nNOT complete: {len(qa['chunks_missing'])} chunks missing. Re-run `cehbio run` to finish them.")
+
+
+def cmd_models(args):
+    from . import modelstore
+    from .pipelines.images import MODEL_LIST, NOTICE
+    ml = modelstore.load_list(MODEL_LIST)
+    s = _settings(args)
+    print(NOTICE)
+    print()
+    for stage in ("detector", "binary", "order", "species"):
+        print({"detector": "Finding insects", "binary": "Moth or not", "order": "Order",
+               "species": "Species (choose with --set region=...)"}[stage])
+        for name, m in ml["models"].items():
+            if m.get("stage") != stage:
+                continue
+            w = m["files"]["weights"]
+            here = any((d / w["name"]).exists() for d in [modelstore.cache_dir(s)]) or any(
+                modelstore._local_index(d).get(w["name"]) for d in modelstore.search_dirs(s))
+            region = f"region={m['region']:<13}" if m.get("region") else " " * 20
+            print(f"  {name:30s} {region} {m.get('by', '')[:45]:45s} {'(on this machine)' if here else ''}")
+        print()
 
 
 # ---------------------------------------------------------------------------- parser
@@ -287,6 +315,12 @@ def build_parser() -> argparse.ArgumentParser:
     rc.add_argument("--force", action="store_true", help="redo even if already complete")
     rc.add_argument("--keep-temp", action="store_true")
     rc.set_defaults(func=cmd_run_chunk)
+
+    mo = sub.add_parser("models", parents=[common], help="list image models (detector, moth/non-moth, order, species)")
+    mo.set_defaults(func=cmd_models)
+
+    from .pipelines.images.masktool import add_command as _add_mask
+    _add_mask(sub, common)
 
     sub.add_parser("status", parents=[common, dep], help="progress of a deployment").set_defaults(func=cmd_status)
     sub.add_parser("combine", parents=[common, dep], help="merge chunk outputs + QA").set_defaults(func=cmd_combine)

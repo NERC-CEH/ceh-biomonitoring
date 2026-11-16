@@ -10,7 +10,7 @@ Tools from the UK Centre for Ecology & Hydrology (UKCEH) for biodiversity monito
 | Upload recordings or images to UKCEH | the UKCEH upload service | `cehbio upload` | [Upload guide](docs/upload-guide.md) |
 | Birds in audible recordings | **BirdNET** or **Perch** (your choice) | `cehbio run birds` | [Birds](docs/birds.md) |
 | Bats in ultrasonic recordings | **BatDetect2** | `cehbio run bats` | [Bats](docs/bats.md) |
-| Moths and other insects in light-trap images | detection and classification models for AMI traps and LepiSense | `cehbio run images` | *coming soon* |
+| Moths and other insects in light-trap images | insect detection, moth/non-moth, order and regional species models for AMI traps and LepiSense | `cehbio run images` | [Images](docs/images.md) |
 
 You only install what you need. Everything shares one environment, called `ceh-biomonitoring`.
 
@@ -26,7 +26,7 @@ You need [Miniforge](https://conda-forge.org/download/) (conda) once. Then, on M
 git clone https://github.com/NERC-CEH/ceh-biomonitoring.git
 cd ceh-biomonitoring
 ./install.sh                 # just uploading
-./install.sh bats            # + bats       (or: birds, or: birds bats, or: all)
+./install.sh bats            # + bats       (or: birds, images, birds bats, or: all)
 conda activate ceh-biomonitoring
 cehbio pipelines             # what is installed
 ```
@@ -41,7 +41,7 @@ conda activate ceh-biomonitoring
 pip install "ceh-biomonitoring[bats] @ https://github.com/NERC-CEH/ceh-biomonitoring/archive/refs/heads/main.zip"
 ```
 
-Put the pipelines you want in the brackets, e.g. `[birds]`, `[birds,bats]` or `[all]`. Leave out the brackets for uploading only.
+Put the pipelines you want in the brackets, e.g. `[birds]`, `[images]`, `[birds,bats]` or `[all]`. Leave out the brackets for uploading only.
 
 > **On JASMIN:** install on a sci server (e.g. `ssh sci-vm-04`), not a login node. The installer works around JASMIN's small `/tmp` limit for you.
 
@@ -55,7 +55,7 @@ This finds bat calls in the first 20 recordings in `E:/my_recordings`. Your orig
 
 Then see:
 
-- the guide for your pipeline: [birds](docs/birds.md) or [bats](docs/bats.md)
+- the guide for your pipeline: [birds](docs/birds.md), [bats](docs/bats.md) or [images](docs/images.md)
 - [Recorders and file names](docs/recorders.md): so every result gets its date and time
 - [Running and results](docs/running.md): big jobs, computing clusters, what you get and where it goes
 
@@ -66,12 +66,19 @@ Then see:
 | **BirdNET** (model and location filter) | CC BY-NC-SA 4.0 | **No, non-commercial only** |
 | Perch v2 | Apache 2.0 | Yes |
 | BatDetect2 | see its repository | check |
+| Image models (flat-bug, moth/non-moth, order, species) | see [Images](docs/images.md#models-and-credits) | check each |
+
+> The image models are **still in development and far from perfect**: treat their results as suggestions, and have identifications checked by an expert.
 
 ## Getting help
 
 Run any command with `--help`, e.g. `cehbio run birds --help`. `cehbio check` shows your settings and anything missing.
 
 For questions about uploading data to UKCEH, contact **Alyssa Duffy** at [alyduf@ceh.ac.uk](mailto:alyduf@ceh.ac.uk). Problems with the code: please open an issue.
+
+## Licence
+
+The code is MIT-licensed (see [LICENSE](LICENSE)). The models have their own licences, above.
 
 ## For developers
 

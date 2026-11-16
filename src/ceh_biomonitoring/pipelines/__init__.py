@@ -18,6 +18,7 @@ from .base import Pipeline
 BUILT_IN = {
     "bats": "ceh_biomonitoring.pipelines.bats:BatDetect",
     "birds": "ceh_biomonitoring.pipelines.birds:Birds",
+    "images": "ceh_biomonitoring.pipelines.images:Images",
 }
 
 

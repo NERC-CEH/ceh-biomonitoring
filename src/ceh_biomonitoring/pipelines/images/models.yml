@@ -1,0 +1,187 @@
+# Models used by the images pipeline (cehbio run images).
+#
+# THESE MODELS ARE STILL IN DEVELOPMENT AND FAR FROM PERFECT. Every result should be treated as a
+# suggestion, and identifications checked by an expert before they are relied on.
+#
+# Each file is found by name (in the download cache or models.search_dirs) or downloaded, and only
+# used if its SHA-256 checksum matches, so results always come from exactly the model listed here.
+# Names follow <what>-<task>-<region>-v<N>. "name" is the original file name; "asset" is the file
+# name in this repository's model release.
+
+release: https://github.com/NERC-CEH/ceh-biomonitoring/releases/download/models-2026.11/
+
+models:
+  # ------------------------------------------------------------------ detection
+  insect-detector-flatbug-m:
+    stage: detector
+    kind: flatbug
+    title: flat-bug M insect detector
+    by: flat-bug (Svenning, Geissmann et al., darsa-group)
+    source: https://github.com/darsa-group/flat-bug
+    licence: MIT
+    files:
+      weights: {name: flat_bug_M.pt, bytes: 49694305,
+                sha256: 2ec28c5000b8d2bad38a702c96bfbda262a5f65dd643b0ba3a36b541bc3283aa}
+                # no url: if it is not found locally, the flat-bug package downloads its own copy
+
+  # ------------------------------------------------------------------ moth / non-moth
+  moth-vs-nonmoth-v1:
+    stage: binary
+    title: Moth vs non-moth (EfficientNetV2-B3)
+    by: Mila / Rolnick lab (AMI project)
+    date: 2022-05-06
+    source: https://github.com/RolnickLab/ami-data-companion
+    licence: see source
+    files:
+      weights: {name: moth-nonmoth-effv2b3_20220506_061527_30.pth, bytes: 51943133,
+                sha256: a334b01220e8de8acc149b2f1374ee27051129f0aea7b6da9e2be3574ac8156b,
+                url: "https://object-arbutus.alliancecan.ca/swift/v1/AUTH_3c987b8fc90743469d42899b1fdb48eb/ami-models/moths/classification/moth-nonmoth-effv2b3_20220506_061527_30.pth"}
+      labels: {name: 05-moth-nonmoth_category_map.json, bytes: 25,
+               sha256: 5dda4bedacfdd47462ec1469fc4336d7ca9cf0725c31e29412988b90c4e054e0,
+               url: "https://object-arbutus.alliancecan.ca/swift/v1/AUTH_3c987b8fc90743469d42899b1fdb48eb/ami-models/moths/classification/05-moth-nonmoth_category_map.json"}
+
+  # ------------------------------------------------------------------ order
+  insect-order-v1:
+    stage: order
+    title: Insect order (ResNet-50, 16 classes)
+    by: Aarhus University (Bjerge et al. 2025, Remote Sensing in Ecology and Conservation) via AMBER
+    source: https://github.com/kimbjerge/MCC24-trap
+    licence: to be confirmed
+    files:
+      weights: {name: dhc_best_128.pth, asset: insect-order-v1.pth, bytes: 98583101,
+                sha256: ff7f2145e3a49c20cb675878b75bf4a27ea1aee3f9971259b6fce72a5b1e4ef6}
+      labels: {name: thresholdsTestTrain.csv, asset: insect-order-v1.thresholds.csv, bytes: 992,
+               sha256: 9080ff88fde54e25d207ecaedecc0cbd37a4d5d5cf40c8287fc6a5570bfa2a78}
+
+  # ------------------------------------------------------------------ species (one per region)
+  # Trained by The Alan Turing Institute for AMBER (publicly funded; open access).
+  moth-species-anguilla-v1:
+    stage: species
+    region: anguilla
+    title: Moth species, Anguilla (160 species)
+    by: The Alan Turing Institute (AMBER)
+    date: 2024-11-19
+    licence: open access (AMBER), licence to be confirmed
+    files:
+      weights: {name: turing-anguilla_v01_resnet50_2024-11-19-19-17_state.pt, asset: moth-species-anguilla-v1.pt,
+                bytes: 191074031, sha256: a307f02a406af1f6cc7547b578ca2c90d1c28cc58cd005b87473c73d7073e9d8}
+      labels: {name: 02_anguilla_data_category_map.json, asset: moth-species-anguilla-v1.labels.json,
+               bytes: 4221, sha256: d33ea45860e951e5f4703e039bd556807ac2f8003b38c517dc725c8929a05fe9}
+
+  moth-species-costa-rica-v3:
+    stage: species
+    region: costa-rica
+    title: Moth species, Costa Rica (5,952 species)
+    by: The Alan Turing Institute (AMBER)
+    date: 2024-11-20
+    licence: open access (AMBER), licence to be confirmed
+    files:
+      weights: {name: turing-costarica_v03_resnet50_2024-11-20-16-52_state.pt, asset: moth-species-costa-rica-v3.pt,
+                bytes: 285970640, sha256: 4d037462cc8a2136bbc970a26a27ffff6a1196352832f1dd7a913325c59e5175}
+      labels: {name: 04_costarica_data_category_map.json, asset: moth-species-costa-rica-v3.labels.json,
+               bytes: 166251, sha256: c1aa54cfedb72ee03af1bc9c970b0fd1599a939782622b170299cd041f5224a4}
+
+  moth-species-japan-v2:
+    stage: species
+    region: japan
+    title: Moth species, Japan (6,040 species)
+    by: The Alan Turing Institute (AMBER)
+    date: 2026-01-09
+    licence: open access (AMBER), licence to be confirmed
+    files:
+      weights: {name: turing-japan_v02_resnet50_2026-01-09-16-22_state.pt, asset: moth-species-japan-v2.pt,
+                bytes: 287411502, sha256: bd1fd5078d79812ba14c4b39de53c06c3752384ff7aae6bd7163bca2c932bb9c}
+      labels: {name: 02_japan_data_category_map.json, asset: moth-species-japan-v2.labels.json,
+               bytes: 175152, sha256: d58fd173773f578b6f1ea1681fed7c6d36832236078d58c7ee9ac32e95cf5904}
+
+  moth-species-kenya-uganda-v1:
+    stage: species
+    region: kenya-uganda
+    title: Moth species, Kenya and Uganda (3,045 species)
+    by: The Alan Turing Institute (AMBER)
+    date: 2024-11-19
+    licence: open access (AMBER), licence to be confirmed
+    files:
+      weights: {name: turing-kenya-uganda_v01_resnet50_2024-11-19-18-44_state.pt, asset: moth-species-kenya-uganda-v1.pt,
+                bytes: 238343795, sha256: c45dd52935c28a19e4056baa2c2cf16e892e4e427b4a44d71882b0e700c5822a}
+      labels: {name: 01_kenya-uganda_data_category_map.json, asset: moth-species-kenya-uganda-v1.labels.json,
+               bytes: 86739, sha256: 5c84b794ffbf7685aeaee11229754c372b67ec912cb70ad3d79ad407855deacf}
+
+  moth-species-madagascar-v1:
+    stage: species
+    region: madagascar
+    title: Moth species, Madagascar (4,846 species)
+    by: The Alan Turing Institute (AMBER)
+    date: 2024-07-01
+    licence: open access (AMBER), licence to be confirmed
+    status: not yet used on real deployments
+    files:
+      weights: {name: turing-madagascar_v01_resnet50_2024-07-01-13-01_state.pt, asset: moth-species-madagascar-v1.pt,
+                bytes: 267850417, sha256: f02ff0b6c16b7dc2faa77c9e08b3dc1c03e6bd93d19224931437963ab560ae98}
+      labels: {name: 01_madagascar_data_category_map.json, asset: moth-species-madagascar-v1.labels.json,
+               bytes: 139177, sha256: 172501f805ea7820cc63fd2c87197a14605853c9649249d102078d8944f00563}
+
+  moth-species-namibia-v1:
+    stage: species
+    region: namibia
+    title: Moth species, Namibia (759 species)
+    by: The Alan Turing Institute (AMBER)
+    date: 2025-12-08
+    licence: open access (AMBER), licence to be confirmed
+    files:
+      weights: {name: turing-namibia_v01_resnet50_2025-12-08-14-53_state.pt, asset: moth-species-namibia-v1.pt,
+                bytes: 200888568, sha256: 49cf9e4472c6de1e0f59db7151cfc00e075f409a4f13413916e82ace7d0abc12}
+      labels: {name: 01_namibia_data_category_map.json, asset: moth-species-namibia-v1.labels.json,
+               bytes: 20994, sha256: e82ed27f417a8698ce6021aeba95af26550953e16f80db6267b5ce8280960c6a}
+
+  moth-species-nigeria-v1:
+    stage: species
+    region: nigeria
+    title: Moth species, Nigeria (2,057 species)
+    by: The Alan Turing Institute (AMBER)
+    date: 2024-11-19
+    licence: open access (AMBER), licence to be confirmed
+    files:
+      weights: {name: turing-nigeria_v01_resnet50_2024-11-19-18-41_state.pt, asset: moth-species-nigeria-v1.pt,
+                bytes: 222153998, sha256: 14734cbc10d3555092387ec0fe66d85d319f89ea1183e07841a4e255e8c072b2}
+      labels: {name: 01_nigeria_data_category_map.json, asset: moth-species-nigeria-v1.labels.json,
+               bytes: 57847, sha256: 18080c71682407d68cb950a6adf173ada8b8486d34b2b5d1010f53ad709d5f29}
+
+  moth-species-singapore-v2:
+    stage: species
+    region: singapore
+    title: Moth species, Singapore (1,274 species)
+    by: The Alan Turing Institute (AMBER)
+    date: 2024-11-21
+    licence: open access (AMBER), licence to be confirmed
+    files:
+      weights: {name: turing-singapore_v02_resnet50_2024-11-21-19-58_state.pt, asset: moth-species-singapore-v2.pt,
+                bytes: 209326288, sha256: 63e8be2df229011e3f33572c83172be326bcc406e1820c8de7198654991f1600}
+      labels: {name: 02_singapore_data_category_map.json, asset: moth-species-singapore-v2.labels.json,
+               bytes: 35091, sha256: 2f6ce359a50c9a1ba4f5d98495a98390899a75157ec7bd0fd75ea1fc81e2d18a}
+
+  moth-species-thailand-v1:
+    stage: species
+    region: thailand
+    title: Moth species, Thailand (3,800 species)
+    by: The Alan Turing Institute (AMBER)
+    date: 2024-11-21
+    licence: open access (AMBER), licence to be confirmed
+    files:
+      weights: {name: turing-thailand_v01_resnet50_2024-11-21-16-28_state.pt, asset: moth-species-thailand-v1.pt,
+                bytes: 250711791, sha256: 2187bd97fbc37990b5371fb0a49f983aa4db00599c7b979cb4daa8387aed8cdc}
+      labels: {name: 02_thailand_data_category_map.json, asset: moth-species-thailand-v1.labels.json,
+               bytes: 107399, sha256: fa03f8af69e4e0ed59f9a89545f7b81dbf9786e92a746a7d880eaf582ce5346d}
+
+  moth-species-uk-v3:
+    stage: species
+    region: uk
+    title: Moth species, UK (2,661 species)
+    by: The Alan Turing Institute (AMBER)
+    date: 2024-05-13
+    licence: open access (AMBER), licence to be confirmed
+    files:
+      weights: {name: turing-uk_v03_resnet50_2024-05-13-10-03_state.pt, asset: moth-species-uk-v3.pt,
+                bytes: 232047465, sha256: 68cc639017d951df146649ffaf59d1d4eb699406bea485c85b7cf81e0a46b990}
+      labels: {name: 03_uk_data_category_map.json, asset: moth-species-uk-v3.labels.json,
+               bytes: 77103, sha256: ed5dde8159c3f8c66842acc20ba27fbb8e4b2cba77e6ca183e4e26e930a5f7c2}

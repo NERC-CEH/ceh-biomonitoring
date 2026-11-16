@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below, and cite the models you used (see the docs)."
+title: "ceh-biomonitoring: biodiversity monitoring pipelines from UKCEH"
+authors:
+  - family-names: Duffy
+    given-names: Alyssa
+    affiliation: UK Centre for Ecology & Hydrology
+  - name: "UKCEH Biomonitoring"
+license: MIT
+repository-code: "https://github.com/NERC-CEH/ceh-biomonitoring"
+version: 0.2.0
+date-released: 2026-11-16

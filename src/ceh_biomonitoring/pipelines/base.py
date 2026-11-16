@@ -32,7 +32,19 @@ class Pipeline:
     output_name: str = "detections"  # what one output row is: e.g. detections
     media: tuple[str, ...] = ()      # which device media it accepts: ("audio",) or ("images",)
     needs_gpu: bool = False
+    files_per_chunk: int | None = None   # None = the settings' chunking.files_per_chunk
     defaults: dict = {}
+
+    def group_files(self, keys: list[str], device: dict | None = None,
+                    timestamp_pattern: str | None = None) -> list[list[str]] | None:
+        """Optional: files that must stay together in one chunk, in order (e.g. one night of images,
+        so tracking is never broken mid-night). None = split into equal-sized chunks."""
+        return None
+
+    def after_combine(self, ddir: Path, deployment: str, detections: pd.DataFrame, files: pd.DataFrame,
+                      params: dict) -> dict:
+        """Optional: build extra outputs once all chunks are combined. Returns extra fields for the QA file."""
+        return {}
 
     def check_installed(self) -> None:
         """Raise ImportError with a friendly message if this pipeline's extra isn't installed."""
