@@ -105,3 +105,32 @@ def test_login_read_from_credentials_file(tmp_path, monkeypatch):
     assert upload.saved_login(s)["UKCEH_username"] == "u"
     monkeypatch.setenv("CEHBIO_CREDENTIALS", str(tmp_path / "missing.json"))
     assert upload.saved_login(s) == {}
+
+
+def test_deployment_request_is_sent(monkeypatch, tmp_path, capsys):
+    from ceh_biomonitoring import sites
+    from ceh_biomonitoring.cli import build_parser
+    sent = {}
+
+    class Svc:
+        def deployments(self):
+            return [{"deployment_id": "dep000001", "country": "United Kingdom", "location_name": "Wood",
+                     "camera_id": "CAM1", "status": "active"}]
+
+        def _post(self, path, fields):
+            sent.update(path=path, **fields)
+            return {"deployment_id": "dep000002", "status": "pending"}
+
+    monkeypatch.setattr(sites, "_service", lambda s: Svc())
+    args = build_parser().parse_args(["deployments", "request", "--name", "A P", "--country", "United Kingdom",
+                                      "--site", "Meadow", "--lat", "51.7", "--lon", "-1.2", "--device-type", "AudioMoth",
+                                      "--device-id", "AM1", "--start", "2027-05-01", "--notes", "", "--yes"])
+    s = Settings.load(profile="local", settings_file=tmp_path / "none.yml")
+    sites.request(args, s)
+    assert sent["path"] == "request-deployment/" and sent["location_name"] == "Meadow" and sent["lat"] == "51.7"
+    assert "dep000002" in capsys.readouterr().out
+    bad = build_parser().parse_args(["deployments", "request", "--name", "A", "--country", "United Kingdom",
+                                     "--site", "M", "--lat", "95", "--lon", "0", "--device-type", "AudioMoth",
+                                     "--device-id", "X", "--start", "2027-05-01", "--notes", "", "--yes"])
+    with pytest.raises(SystemExit):
+        sites.request(bad, s)

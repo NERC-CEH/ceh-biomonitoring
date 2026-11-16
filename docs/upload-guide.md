@@ -7,6 +7,7 @@ If anything goes wrong or you have a question, email **Alyssa Duffy** at [alyduf
 ## What you need
 
 - **An upload username and password.** UKCEH gives these to partners when it has been agreed that UKCEH will process their data. If you don't have them, email Alyssa Duffy at [alyduf@ceh.ac.uk](mailto:alyduf@ceh.ac.uk).
+- **A deployment for each device**: one device at one site for one survey. See [Setting up your sites](setting-up-sites.md).
 - **Your survey data**, such as an SD card or a folder on your computer. One upload covers one deployment, so keep each deployment's data in its own folder. Folders inside it are fine; they are searched too.
 - **A computer** running Windows, macOS or Linux, with an internet connection.
 
@@ -139,7 +140,7 @@ You can close the window when it's finished. Uploading a large deployment can ta
 This is usually a short break in the internet connection or the upload service. Run `cehbio upload` again with the same answers; only the failed files are retried. If they still fail a few hours later, email [alyduf@ceh.ac.uk](mailto:alyduf@ceh.ac.uk) and attach the upload log (see [Good to know](#good-to-know)).
 
 **My deployment isn't in the list.**
-Don't upload it somewhere else. Email us with the site name and the camera or recorder ID, and we'll add it.
+Don't upload it somewhere else. Ask for it with `cehbio deployments request`: see [Setting up your sites](setting-up-sites.md). Once UKCEH has approved it, it appears in the list.
 
 **I uploaded files to the wrong deployment or data type.**
 Email [alyduf@ceh.ac.uk](mailto:alyduf@ceh.ac.uk) as soon as you can, saying what you uploaded and where to. We'll move the files to the right place.

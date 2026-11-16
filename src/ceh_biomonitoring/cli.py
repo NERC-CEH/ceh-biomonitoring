@@ -335,6 +335,9 @@ def build_parser() -> argparse.ArgumentParser:
     from .pipelines.images.masktool import add_command as _add_mask
     _add_mask(sub, common)
 
+    from .sites import add_command as _add_deployments
+    _add_deployments(sub, common)
+
     sub.add_parser("status", parents=[common, dep], help="progress of a deployment").set_defaults(func=cmd_status)
     sub.add_parser("combine", parents=[common, dep], help="merge chunk outputs + QA").set_defaults(func=cmd_combine)
 

@@ -7,6 +7,7 @@ Tools from the UK Centre for Ecology & Hydrology (UKCEH) for biodiversity monito
 
 | What | Tool | Command | Guide |
 |---|---|---|---|
+| Set up your sites (deployments) for uploading | the UKCEH upload service | `cehbio deployments` | [Setting up your sites](docs/setting-up-sites.md) |
 | Upload recordings or images to UKCEH | the UKCEH upload service | `cehbio upload` | [Upload guide](docs/upload-guide.md) |
 | Birds in audible recordings | **BirdNET** or **Perch** (your choice) | `cehbio run birds` | [Birds](docs/birds.md) |
 | Bats in ultrasonic recordings | **BatDetect2** | `cehbio run bats` | [Bats](docs/bats.md) |
