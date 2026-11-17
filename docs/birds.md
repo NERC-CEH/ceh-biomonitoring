@@ -41,7 +41,7 @@ cehbio run birds --folder E:/my_recordings --deployment wood-1 --set model=perch
 | cut-off | `min_conf=0.25` (BirdNET's default) | **none by default**: each 5-second window's top species and score are reported. Set `logit_threshold=…` once you have checked scores against recordings you have listened to |
 | more species per window | – | `top_n=3` (when there is no cut-off) |
 | overlapping windows | `overlap=1.5` (seconds) | `hop_seconds=2.5` (the default, 5, means no overlap) |
-| only certain species | – | `species_list=my_species.csv` (a `species` column of scientific names) |
+| only certain species | `species_list=my_species.csv` (a `species` column of scientific names) | the same |
 | re-threshold later without re-running | – | `save_scores=true`: keeps every window's scores |
 
 **Always check a sample of results by listening before trusting a cut-off for your sites.** Scores mean different things at different sites, and both models make mistakes, especially with insects, rain, wind and distant or overlapping calls.

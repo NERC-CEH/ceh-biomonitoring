@@ -113,6 +113,7 @@ class Images(Pipeline):
         "detector_precision": "float32",  # float32 (best) or float16 (faster on a GPU, may miss faint insects)
         "max_crops_per_image": 100,    # keep the best boxes per photo (the rest are counted)
         "top_n": 5,                    # species guesses per crop
+        "species_list": "",            # CSV with a 'species' column: guesses only from these species
         "mask": "",                    # black-and-white image: black = ignore (see cehbio mask)
         "mask_overlap": 0.5,           # ignore a box when this much of it is in the black area
         "mask_site": "",               # for a masks.json with several sites: which one (default: by folder)
@@ -211,6 +212,12 @@ class Images(Pipeline):
                            or chunk.get("deployment_id"))
         rules = F.load_rules(params.get("filters"))
         thr, cap, bs = float(params["box_threshold"]), int(params["max_crops_per_image"]), int(params["batch_size"])
+        allowed = None
+        if params.get("species_list") and M["species"] is not None:
+            from ...species_lists import norm, read
+            wanted = read(params["species_list"])
+            allowed = np.array([norm(lab) in wanted for lab in M["species_labels"]])
+            print(f"Species list: {int(allowed.sum())} of the model's {len(allowed)} species", flush=True)
         crop_dir = workdir / "keep" / "crops"
         overlay_dir = workdir / "keep" / "overlays"
         if params.get("save_overlays"):
@@ -308,7 +315,8 @@ class Images(Pipeline):
                         if want:
                             probs, emb = nets.species_scores(M["species"], batch[want])
                             for w_i, j in enumerate(want):
-                                top = probs[w_i].argsort()[-top_n:][::-1]
+                                ranked = np.where(allowed, probs[w_i], -1.0) if allowed is not None else probs[w_i]
+                                top = ranked.argsort()[-top_n:][::-1]
                                 kept[s + j]["_species"] = ([M["species_labels"][t] for t in top]
                                                            + [float(probs[w_i][t]) for t in top])
                                 kept[s + j]["_embedding"] = emb[w_i]
@@ -362,6 +370,7 @@ class Images(Pipeline):
                 "detector_settings": {k: params.get(k) for k in ("detector_score_threshold", "detector_min_size",
                                                                   "enhance_contrast", "detector_precision")},
                 "order_input": params.get("order_input"),
+                "species_list": params.get("species_list") or None,
                 "mask": getattr(mask, "path", None), "n_filters": len(rules), "notice": NOTICE}
         try:
             from importlib.metadata import version

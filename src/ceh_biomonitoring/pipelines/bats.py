@@ -27,7 +27,9 @@ class BatDetect(Pipeline):
     extensions = (".wav", ".flac")
     key_field = "audio_keys"
     media = ("audio",)
-    defaults = {"detection_threshold": 0.3}
+    defaults = {"detection_threshold": 0.3,
+                "species_list": "",              # CSV with a 'species' column (e.g. bats recorded near the site)
+                "species_list_action": "flag"}   # flag (column in_species_list) | remove
 
     def check_installed(self) -> None:
         require("batdetect2", self.extra)
@@ -75,4 +77,12 @@ class BatDetect(Pipeline):
             models = {"batdetect2": version("batdetect2")}
         except Exception:  # noqa: BLE001
             models = {}
-        return ChunkResult(pd.DataFrame(rows, columns=COLUMNS), none, failed, models)
+        det = pd.DataFrame(rows, columns=COLUMNS)
+        if params.get("species_list"):
+            from ..species_lists import norm, read
+            wanted = read(params["species_list"])
+            det["in_species_list"] = det["species_name"].map(lambda x: norm(x) in wanted)
+            if params.get("species_list_action") == "remove":
+                det = det[det["in_species_list"]]
+            models["species_list"] = params["species_list"]
+        return ChunkResult(det, none, failed, models)

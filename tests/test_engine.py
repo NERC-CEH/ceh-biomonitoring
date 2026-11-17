@@ -226,3 +226,15 @@ def test_config_from_an_installed_package():
     p = config_path("pkg:ceh_biomonitoring/profiles/defaults.yml")
     assert p.exists() and p.name == "defaults.yml"
     assert config_path("~/x.yml").is_absolute()
+
+
+def test_species_list_reading(tmp_path):
+    from ceh_biomonitoring.species_lists import norm, read
+    f = tmp_path / "l.csv"
+    f.write_text("species,same_as\nEptesicus serotinus,Eptesicus serotinus\nCnephaeus serotinus,Eptesicus serotinus\n")
+    names = read(f)
+    assert norm("Eptesicus serotinus (Schreber, 1774)") in names and norm("Cnephaeus_serotinus_Serotine") in names
+    bad = tmp_path / "b.csv"
+    bad.write_text("name\nx\n")
+    with pytest.raises(SystemExit):
+        read(bad)

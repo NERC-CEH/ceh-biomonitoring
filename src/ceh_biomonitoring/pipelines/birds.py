@@ -45,7 +45,7 @@ class Birds(Pipeline):
         "hop_seconds": 5.0,          # step between windows; 5 = no overlap
         "logit_threshold": None,     # empty = report each window's top species; set a number to filter
         "top_n": 1,                  # species per window when no threshold is set
-        "species_list": "",          # optional CSV with a 'species' column: only these are reported
+        "species_list": "",          # CSV with a 'species' column: only these species are reported (both models)
         "save_scores": False,        # keep per-window scores + embeddings (.npz) to re-threshold later
     }
 
@@ -81,7 +81,9 @@ class Birds(Pipeline):
                 shutil.move(str(path), audio_dir / path.name)
         kwargs = {"min_conf": float(params["min_conf"]), "overlap": float(params["overlap"]), "rtype": "csv",
                   "threads": int(os.environ.get("SLURM_CPUS_PER_TASK") or os.cpu_count() or 1)}
-        if lat is not None and lon is not None:
+        if params.get("species_list"):
+            kwargs["slist"] = str(self._birdnet_slist(params["species_list"], workdir))
+        elif lat is not None and lon is not None:
             kwargs.update(lat=float(lat), lon=float(lon), week=int(params["week"]) if params.get("week") else -1)
         analyze(str(audio_dir), str(out_dir), **kwargs)
 
@@ -107,8 +109,24 @@ class Birds(Pipeline):
             models = {"birdnet-analyzer": version("birdnet-analyzer")}
         except Exception:  # noqa: BLE001
             models = {}
-        models.update({"geo_model": bool(lat is not None and lon is not None), "licence": "CC BY-NC-SA 4.0"})
+        models.update({"geo_model": bool(lat is not None and lon is not None and not params.get("species_list")),
+                       "species_list": params.get("species_list") or None, "licence": "CC BY-NC-SA 4.0"})
         return ChunkResult(det, none, failed, models)
+
+    @staticmethod
+    def _birdnet_slist(species_list: str, workdir: Path) -> Path:
+        """BirdNET's own species-list file ('Scientific_Common' lines) for the species in our list."""
+        import birdnet_analyzer.config as cfg
+        from ..species_lists import norm, read
+        wanted = read(species_list)
+        lines = [l.strip() for l in open(cfg.BIRDNET_LABELS_FILE, encoding="utf-8") if l.strip()]
+        keep = [l for l in lines if norm(l.split("_")[0]) in wanted]
+        if not keep:
+            raise SystemExit(f"None of the species in {species_list} are in BirdNET's list")
+        out = workdir / "birdnet_species_list.txt"
+        out.write_text("".join(line + "\n" for line in keep), encoding="utf-8")
+        print(f"Species list: {len(keep)} of BirdNET's species ({len(wanted)} names in {species_list})", flush=True)
+        return out
 
     # ------------------------------------------------------------------ Perch
     _net = None
@@ -145,8 +163,9 @@ class Birds(Pipeline):
         top_n = max(1, int(params.get("top_n") or 1))
         allowed = None
         if params.get("species_list"):
-            allowed = set(pd.read_csv(params["species_list"])["species"].astype(str))
-        keep = np.array([allowed is None or lab in allowed for lab in self._labels])
+            from ..species_lists import norm, read
+            allowed = read(params["species_list"])
+        keep = np.array([allowed is None or norm(lab) in allowed for lab in self._labels])
 
         rows, none, failed = [], [], []
         score_dir = workdir / "keep" / "perch_scores"   # anything under keep/ is saved with the outputs
