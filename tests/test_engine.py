@@ -269,3 +269,26 @@ def test_unlikely_months_are_kept_and_flagged(tmp_path):
                         "species_name": ["Hirundo rustica", "Erithacus rubecula", "Hirundo rustica"]})
     assert list(flag_unlikely(det, sl)["unlikely_this_month"]) == [True, False, False]
     assert keep_unlikely({}) and not keep_unlikely({"species_list_unlikely": "remove"})
+
+
+def test_example_files_match_the_manifest():
+    """Every example in the repository is there and unchanged; every file has a licence and a credit."""
+    import hashlib
+    from ceh_biomonitoring import examples
+    m = examples.manifest()
+    assert {"birds", "bats", "images"} <= set(m)
+    for pipeline, ex in m.items():
+        for f in ex["files"]:
+            assert f["licence"] and f["credit"] and f["sha256"], f["name"]
+            if f["in_repo"]:
+                local = examples.REPO_EXAMPLES / pipeline / f["name"]
+                assert hashlib.sha256(local.read_bytes()).hexdigest() == f["sha256"], f["name"]
+
+
+def test_example_check():
+    import pandas as pd
+    from ceh_biomonitoring.examples import check
+    det = pd.DataFrame({"species_name": ["Erithacus rubecula", "Parus major"]})
+    assert check("birds", det, {"min_detections": 1, "any_species": ["Erithacus rubecula"]})[0]
+    assert not check("birds", det, {"any_species": ["Turdus merula"]})[0]
+    assert not check("bats", det.iloc[:0], {"min_detections": 1})[0]

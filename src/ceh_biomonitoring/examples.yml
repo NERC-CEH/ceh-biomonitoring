@@ -1,0 +1,141 @@
+# Small example data for trying each pipeline: cehbio examples run <pipeline>
+# Every file is checked against its sha256. in_repo: true files are in examples/ in this repository;
+# the others are downloaded from their source when first used (their licence doesn't allow copying them here).
+birds:
+  about: Three 30 s recordings of common UK birds (Robin, Blackbird, Wren), cut from open recordings on GBIF / iNaturalist.
+  run: []
+  expect:
+    min_detections: 1
+    any_species:
+    - Erithacus rubecula
+    - Turdus merula
+    - Troglodytes troglodytes
+  files:
+  - name: 20260124_120000_erithacus-rubecula_gbif6130110847.wav
+    in_repo: true
+    url: https://raw.githubusercontent.com/NERC-CEH/ceh-biomonitoring/main/examples/birds/20260124_120000_erithacus-rubecula_gbif6130110847.wav
+    sha256: e57c471c19785f40a50ff993351ad2ca6eb9f094235dc145c3019764a6adb2fc
+    species: Erithacus rubecula
+    licence: CC0 1.0
+    credit: Richard M
+    source: https://www.gbif.org/occurrence/6130110847
+    original: https://static.inaturalist.org/sounds/1749477.wav
+    recorded: '2026-01-24'
+    lat: 52.079
+    lon: 1.223436
+    note: first 30 s
+  - name: 20260316_120000_turdus-merula_gbif6178462112.wav
+    in_repo: true
+    url: https://raw.githubusercontent.com/NERC-CEH/ceh-biomonitoring/main/examples/birds/20260316_120000_turdus-merula_gbif6178462112.wav
+    sha256: 4e1ebfafef20877c785ffe4c94b56beadf7cff4b255095aabcbe2225bdbed565
+    species: Turdus merula
+    licence: CC0 1.0
+    credit: Richard M
+    source: https://www.gbif.org/occurrence/6178462112
+    original: https://static.inaturalist.org/sounds/1808814.wav
+    recorded: '2026-03-16'
+    lat: 52.062439
+    lon: 1.154737
+    note: first 30 s
+  - name: 20260123_120000_troglodytes-troglodytes_gbif6130414475.wav
+    in_repo: true
+    url: https://raw.githubusercontent.com/NERC-CEH/ceh-biomonitoring/main/examples/birds/20260123_120000_troglodytes-troglodytes_gbif6130414475.wav
+    sha256: c062e66af42f34056f4578e065f7a87a04c63862373cd591f86d24157469b3bd
+    species: Troglodytes troglodytes
+    licence: CC BY 4.0
+    credit: Andrew Skotnicki
+    source: https://www.gbif.org/occurrence/6130414475
+    original: https://static.inaturalist.org/sounds/1748758.wav
+    recorded: '2026-01-23'
+    lat: 51.352699
+    lon: -0.285663
+    note: first 30 s
+bats:
+  about: 'Three short full-spectrum (256 kHz) recordings of UK bats: Common Pipistrelle, Daubenton''s bat and Noctule.'
+  run: []
+  expect:
+    min_detections: 1
+  files:
+  - name: 20260825_220000_pipistrellus-pipistrellus_gbif6519421762.wav
+    in_repo: true
+    url: https://raw.githubusercontent.com/NERC-CEH/ceh-biomonitoring/main/examples/bats/20260825_220000_pipistrellus-pipistrellus_gbif6519421762.wav
+    sha256: 03e0813563ff44cb68bb4d5543306daae974efa836055a6e8ea1ae020a4b2385
+    species: Pipistrellus pipistrellus
+    licence: CC0 1.0
+    credit: Kian Hayles-Cotton
+    source: https://www.gbif.org/occurrence/6519421762
+    original: https://static.inaturalist.org/sounds/2134702.wav
+    recorded: '2026-08-25'
+    lat: 53.900716
+    lon: -1.512955
+    note: unchanged
+  - name: 20220713_220000_myotis-daubentonii_gbif3874157579.wav
+    in_repo: true
+    url: https://raw.githubusercontent.com/NERC-CEH/ceh-biomonitoring/main/examples/bats/20220713_220000_myotis-daubentonii_gbif3874157579.wav
+    sha256: 6605a7b8301f2571dd70180c43bf86eb7ebfe6c0e80e32d73c4def3c82627ff0
+    species: Myotis daubentonii
+    licence: CC0 1.0
+    credit: Tom August
+    source: https://www.gbif.org/occurrence/3874157579
+    original: https://static.inaturalist.org/sounds/499154.wav
+    recorded: '2022-07-13'
+    lat: 51.548728
+    lon: -1.145735
+    note: unchanged
+  - name: 20260427_220000_nyctalus-noctula_gbif6441300599.wav
+    in_repo: true
+    url: https://raw.githubusercontent.com/NERC-CEH/ceh-biomonitoring/main/examples/bats/20260427_220000_nyctalus-noctula_gbif6441300599.wav
+    sha256: 6e1c6dac945203e64e14b36a9965ee438958e2e6230a00285b284cc7b502ba33
+    species: Nyctalus noctula
+    licence: CC0 1.0
+    credit: Desmond Ney
+    source: https://www.gbif.org/occurrence/6441300599
+    original: https://static.inaturalist.org/sounds/1908561.wav
+    recorded: '2026-04-27'
+    lat: 53.571267
+    lon: -3.068468
+    note: unchanged
+images:
+  about: Five consecutive photos from an automated moth trap (28 July 2022), for detection, classification and tracking. Downloaded
+    from the AMI Data Companion's test images when first used; not copied into this repository.
+  run:
+  - --timestamp-pattern
+  - YYYYMMDDhhmmss-*
+  expect:
+    min_detections: 1
+  files:
+  - name: 20220728232239-00-69.jpg
+    in_repo: false
+    url: https://raw.githubusercontent.com/RolnickLab/ami-data-companion/55d0787570f8c9d92c450f4fb65a58dd25cf6634/trapdata/tests/images/sequential/20220728232239-00-69.jpg
+    sha256: f3ed1daa461089f62a3e5bf614f88af7f68fbf13434725d76fad8e508ec6e261
+    licence: AGPL-3.0 (the AMI Data Companion repository)
+    credit: 'Rolnick Lab, Mila: AMI Data Companion test images'
+    source: https://github.com/RolnickLab/ami-data-companion/tree/main/trapdata/tests/images/sequential
+  - name: 20220728232322-00-70.jpg
+    in_repo: false
+    url: https://raw.githubusercontent.com/RolnickLab/ami-data-companion/55d0787570f8c9d92c450f4fb65a58dd25cf6634/trapdata/tests/images/sequential/20220728232322-00-70.jpg
+    sha256: 55ca3a0a1cb767f9a95ea0c7348a11f884f940c1b66bed2131fd8947509cb5e4
+    licence: AGPL-3.0 (the AMI Data Companion repository)
+    credit: 'Rolnick Lab, Mila: AMI Data Companion test images'
+    source: https://github.com/RolnickLab/ami-data-companion/tree/main/trapdata/tests/images/sequential
+  - name: 20220728232445-00-71.jpg
+    in_repo: false
+    url: https://raw.githubusercontent.com/RolnickLab/ami-data-companion/55d0787570f8c9d92c450f4fb65a58dd25cf6634/trapdata/tests/images/sequential/20220728232445-00-71.jpg
+    sha256: 8d97f85d7ecdef1084a4edc41ab00d572a6d490a4202ff9e0c424fbf4a8c2e52
+    licence: AGPL-3.0 (the AMI Data Companion repository)
+    credit: 'Rolnick Lab, Mila: AMI Data Companion test images'
+    source: https://github.com/RolnickLab/ami-data-companion/tree/main/trapdata/tests/images/sequential
+  - name: 20220728232552-00-72.jpg
+    in_repo: false
+    url: https://raw.githubusercontent.com/RolnickLab/ami-data-companion/55d0787570f8c9d92c450f4fb65a58dd25cf6634/trapdata/tests/images/sequential/20220728232552-00-72.jpg
+    sha256: 87f13ca7018c84c343bddb8c90a3a5b258ca6b4c33ba54e65f526043fdfa331c
+    licence: AGPL-3.0 (the AMI Data Companion repository)
+    credit: 'Rolnick Lab, Mila: AMI Data Companion test images'
+    source: https://github.com/RolnickLab/ami-data-companion/tree/main/trapdata/tests/images/sequential
+  - name: 20220728232652-00-74.jpg
+    in_repo: false
+    url: https://raw.githubusercontent.com/RolnickLab/ami-data-companion/55d0787570f8c9d92c450f4fb65a58dd25cf6634/trapdata/tests/images/sequential/20220728232652-00-74.jpg
+    sha256: a653620a02c4ed682770bdae5ed17edae5e23d3698a02fe2497ded5523e1cf2c
+    licence: AGPL-3.0 (the AMI Data Companion repository)
+    credit: 'Rolnick Lab, Mila: AMI Data Companion test images'
+    source: https://github.com/RolnickLab/ami-data-companion/tree/main/trapdata/tests/images/sequential

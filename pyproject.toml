@@ -59,7 +59,7 @@ cehbio = "ceh_biomonitoring.cli:main"
 where = ["src"]
 
 [tool.setuptools.package-data]
-ceh_biomonitoring = ["profiles/*.yml", "device_profiles/*.yml", "pipelines/images/*.yml"]
+ceh_biomonitoring = ["profiles/*.yml", "device_profiles/*.yml", "pipelines/images/*.yml", "examples.yml"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

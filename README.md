@@ -56,6 +56,14 @@ cehbio run bats --folder E:/my_recordings --deployment wood-1 --max-files 20
 
 This finds bat calls in the first 20 recordings in `E:/my_recordings`. Your original files are never moved, changed or deleted. Remove `--max-files 20` to run on everything.
 
+**No data of your own yet?** Try each pipeline on small open example sets (UK birds, UK bats, moth-trap photos):
+
+```bash
+cehbio examples run birds      # or bats, images, all
+```
+
+It says PASS or PROBLEM. See [Example data](examples/README.md) for what's in them and who recorded them.
+
 Then see:
 
 - the guide for your pipeline: [birds](docs/birds.md), [bats](docs/bats.md) or [images](docs/images.md)
