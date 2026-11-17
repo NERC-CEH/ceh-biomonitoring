@@ -245,7 +245,10 @@ class Images(Pipeline):
                                                 Path(kp[0]).name))
         rows, none, failed = [], [], []
         previous, previous_name = [], None
-        for key, path in ordered:
+        if str(dev).startswith("cpu"):
+            print("Detecting insects on the CPU: this can take a minute or more per photo.", flush=True)
+        for n_done, (key, path) in enumerate(ordered, start=1):
+            started = datetime.now()
             dt = image_datetime(key, device_profile, pattern)
             meta = {"source_key": key, "filename": Path(key).name, "image_path": key,
                     "image_datetime": dt.strftime("%Y-%m-%d %H:%M:%S") if dt else "",
@@ -268,6 +271,10 @@ class Images(Pipeline):
                         clean.unlink(missing_ok=True)
                 if det_input != path:
                     Path(det_input).unlink(missing_ok=True)
+                if n_done <= 5 or n_done % 50 == 0 or n_done == len(ordered):
+                    secs = (datetime.now() - started).total_seconds()
+                    print(f"  photo {n_done}/{len(ordered)}: {Path(key).name}, {len(boxes)} boxes ({secs:.0f} s)",
+                          flush=True)
             except Exception as e:  # noqa: BLE001
                 failed.append({**{k: meta[k] for k in ("source_key", "filename", "image_datetime")},
                                "status": "failed", "error": f"{type(e).__name__}: {e}"})
