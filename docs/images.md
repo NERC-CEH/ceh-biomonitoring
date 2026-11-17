@@ -47,6 +47,7 @@ cehbio run images --folder E:/trap_photos --deployment farm1-2026 --device lepis
 | `max_crops_per_image` | `100` | keep at most this many boxes per photo, the highest-scoring |
 | `top_n` | `5` | species guesses per insect |
 | `species_list` | | a CSV with a `species` column (and optionally `month`, so each photo uses its own month's species), e.g. moths recorded near the site: guesses are chosen only from these (scores stay the model's own) |
+| `species_list_unlikely` | `flag` | species the list marks `unlikely` in a month (a `likelihood` column) can still be guessed; `rank_1_unlikely_this_month` says when the top guess is one. `remove` leaves them out |
 | `mask` | | mask image of areas to ignore (see below) |
 | `mask_overlap` | `0.5` | ignore a box when at least this much of it is in the masked area |
 | `filters` | | your filter file(s) (see below) |

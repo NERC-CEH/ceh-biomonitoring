@@ -2,10 +2,15 @@
 
 A list is a CSV with a 'species' column of scientific names. It can also have a 'month' column (1-12):
 then each recording or photo uses the species listed for ITS month, read from the date in its file
-name, so a list can follow the seasons (e.g. no Swallows in January). Rows without a month apply all
-year. Files whose date can't be read use every species in the list.
+name, so a list can follow the seasons. Rows without a month apply all year. Files whose date can't
+be read use every species in the list.
+
+A 'likelihood' column can mark a species as 'unlikely' in a month (e.g. a Swallow in February: few or no
+records then, but an early bird is still a real detection). Unlikely species are still reported, with
+unlikely_this_month = True so they can be checked; species_list_unlikely=remove drops them instead.
 
     --set species_list=<file>       works with BirdNET, Perch, bats and images
+    --set species_list_unlikely=flag|remove     (default flag)
 
 UKCEH builds monthly lists from open records (cehbio species-list, in-house); any list in this format
 works.
@@ -35,29 +40,65 @@ class SpeciesList:
         self.path = str(path)
         self.all_year: set[str] = set()
         self.by_month: dict[int, set[str]] = {}
+        self.unlikely_by_month: dict[int, set[str]] = {}
         months = df["month"] if "month" in df.columns else [None] * len(df)
-        for name, m in zip(df[col], months):
+        likely = (df["likelihood"].astype(str).str.strip().str.lower() if "likelihood" in df.columns
+                  else ["expected"] * len(df))
+        for name, m, lk in zip(df[col], months, likely):
             if m is None or str(m).strip() in ("", "nan", "all"):
                 self.all_year.add(norm(name))
             else:
                 self.by_month.setdefault(int(float(m)), set()).add(norm(name))
+                if lk == "unlikely":
+                    self.unlikely_by_month.setdefault(int(float(m)), set()).add(norm(name))
         self.everything = set(self.all_year).union(*self.by_month.values()) if self.by_month else set(self.all_year)
 
     @property
     def monthly(self) -> bool:
         return bool(self.by_month)
 
-    def allowed(self, month: int | None = None) -> set[str]:
-        """The species allowed in a month (or all of them if the month isn't known)."""
+    def allowed(self, month: int | None = None, unlikely: bool = True) -> set[str]:
+        """The species allowed in a month (or all of them if the month isn't known). unlikely=False leaves
+        out the species marked unlikely that month."""
         if month is None or not self.by_month:
             return self.everything
-        return self.all_year | self.by_month.get(int(month), set())
+        out = self.all_year | self.by_month.get(int(month), set())
+        return out if unlikely else out - self.unlikely(month)
+
+    def unlikely(self, month: int | None) -> set[str]:
+        """Species marked unlikely in a month (none if the month isn't known)."""
+        if month is None:
+            return set()
+        return self.unlikely_by_month.get(int(month), set()) - self.all_year
 
     def describe(self) -> str:
         if self.monthly:
-            sizes = [len(self.allowed(m)) for m in range(1, 13)]
-            return f"monthly list, {min(sizes)}-{max(sizes)} species a month ({len(self.everything)} in all)"
+            sizes = [len(self.allowed(m, unlikely=False)) for m in range(1, 13)]
+            extra = (f", plus {len(set().union(*self.unlikely_by_month.values()))} species marked unlikely in some "
+                     f"months" if self.unlikely_by_month else "")
+            return f"monthly list, {min(sizes)}-{max(sizes)} species expected a month ({len(self.everything)} in all{extra})"
         return f"{len(self.everything)} species, all year"
+
+
+def keep_unlikely(params: dict) -> bool:
+    """species_list_unlikely: flag (default: report them, flagged) or remove."""
+    v = str(params.get("species_list_unlikely") or "flag").lower()
+    if v not in ("flag", "remove"):
+        raise SystemExit("species_list_unlikely must be 'flag' or 'remove'")
+    return v == "flag"
+
+
+def flag_unlikely(det, slist: "SpeciesList", chunk: dict | None = None, species_col: str = "species_name",
+                  out_col: str = "unlikely_this_month"):
+    """Add a True/False column: is this species marked unlikely in the recording's month?"""
+    if det is None or len(det) == 0:
+        if det is not None:
+            det[out_col] = []
+        return det
+    month = {k: file_month(k, chunk) for k in det["source_key"].dropna().unique()}
+    det[out_col] = [norm(sp) in slist.unlikely(month.get(k)) if isinstance(sp, str) else False
+                    for sp, k in zip(det[species_col], det["source_key"])]
+    return det
 
 
 def read(path: str | Path) -> set[str]:

@@ -42,6 +42,7 @@ cehbio run birds --folder E:/my_recordings --deployment wood-1 --set model=perch
 | more species per window | – | `top_n=3` (when there is no cut-off) |
 | overlapping windows | `overlap=1.5` (seconds) | `hop_seconds=2.5` (the default, 5, means no overlap) |
 | only certain species | `species_list=my_species.csv` (a `species` column of scientific names, and optionally a `month` column so each recording uses its own month's species) | the same |
+| species unlikely that month | a list can mark a species `unlikely` in a month (a `likelihood` column), e.g. a Swallow in February. They're still reported, with `unlikely_this_month` = True, because an early bird is a real record; `species_list_unlikely=remove` leaves them out | the same |
 | re-threshold later without re-running | – | `save_scores=true`: keeps every window's scores |
 
 **Always check a sample of results by listening before trusting a cut-off for your sites.** Scores mean different things at different sites, and both models make mistakes, especially with insects, rain, wind and distant or overlapping calls.

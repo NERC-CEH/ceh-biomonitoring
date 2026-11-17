@@ -114,6 +114,7 @@ class Images(Pipeline):
         "max_crops_per_image": 100,    # keep the best boxes per photo (the rest are counted)
         "top_n": 5,                    # species guesses per crop
         "species_list": "",            # CSV with a 'species' column: guesses only from these species
+        "species_list_unlikely": "flag",  # species marked unlikely that month: flag (top guess) | remove
         "mask": "",                    # black-and-white image: black = ignore (see cehbio mask)
         "mask_overlap": 0.5,           # ignore a box when this much of it is in the black area
         "mask_site": "",               # for a masks.json with several sites: which one (default: by folder)
@@ -214,8 +215,9 @@ class Images(Pipeline):
         thr, cap, bs = float(params["box_threshold"]), int(params["max_crops_per_image"]), int(params["batch_size"])
         slist, list_masks = None, {}
         if params.get("species_list") and M["species"] is not None:
-            from ...species_lists import SpeciesList, norm
+            from ...species_lists import SpeciesList, keep_unlikely, norm
             slist = SpeciesList(params["species_list"])
+            with_unlikely = keep_unlikely(params)
             label_names = [norm(lab) for lab in M["species_labels"]]
             print(f"Species list: {slist.describe()}", flush=True)
 
@@ -224,7 +226,7 @@ class Images(Pipeline):
                 return None
             m = month if slist.monthly else None
             if m not in list_masks:
-                wanted = slist.allowed(m)
+                wanted = slist.allowed(m, with_unlikely)
                 list_masks[m] = np.array([lab in wanted for lab in label_names])
             return list_masks[m]
         crop_dir = workdir / "keep" / "crops"
@@ -334,6 +336,9 @@ class Images(Pipeline):
                     names = c.pop("filters")
                     sp = c.pop("_species", [None] * top_n * 2)     # not a moth: no species guesses
                     c.update(dict(zip(species_cols, sp)))
+                    if slist is not None:
+                        c["rank_1_unlikely_this_month"] = bool(sp[0]) and norm(sp[0]) in slist.unlikely(
+                            dt.month if dt else None)
                     rm_o, n_o = F.apply(rules, "order", c, W, H)
                     rm_s, n_s = F.apply(rules, "species", c, W, H) if M["species"] is not None else (False, [])
                     if rm_o or rm_s:

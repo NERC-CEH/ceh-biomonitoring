@@ -29,7 +29,8 @@ class BatDetect(Pipeline):
     media = ("audio",)
     defaults = {"detection_threshold": 0.3,
                 "species_list": "",              # CSV with a 'species' column (e.g. bats recorded near the site)
-                "species_list_action": "flag"}   # flag (column in_species_list) | remove
+                "species_list_action": "flag",   # flag (column in_species_list) | remove
+                "species_list_unlikely": "flag"} # species marked unlikely that month: flag (unlikely_this_month) | remove
 
     def check_installed(self) -> None:
         require("batdetect2", self.extra)
@@ -79,11 +80,12 @@ class BatDetect(Pipeline):
             models = {}
         det = pd.DataFrame(rows, columns=COLUMNS)
         if params.get("species_list"):
-            from ..species_lists import SpeciesList, file_month, norm
+            from ..species_lists import SpeciesList, file_month, flag_unlikely, keep_unlikely, norm
             slist = SpeciesList(params["species_list"])
             month = {k: file_month(k, chunk) for k in det["source_key"].dropna().unique()}
-            det["in_species_list"] = [norm(sp) in slist.allowed(month.get(k))
+            det["in_species_list"] = [norm(sp) in slist.allowed(month.get(k), keep_unlikely(params))
                                       for sp, k in zip(det["species_name"], det["source_key"])]
+            det = flag_unlikely(det, slist, chunk)
             if params.get("species_list_action") == "remove":
                 det = det[det["in_species_list"]]
             models["species_list"] = params["species_list"]

@@ -46,6 +46,7 @@ class Birds(Pipeline):
         "logit_threshold": None,     # empty = report each window's top species; set a number to filter
         "top_n": 1,                  # species per window when no threshold is set
         "species_list": "",          # CSV with a 'species' column: only these species are reported (both models)
+        "species_list_unlikely": "flag",  # species the list marks unlikely that month: flag (unlikely_this_month) | remove
         "save_scores": False,        # keep per-window scores + embeddings (.npz) to re-threshold later
     }
 
@@ -72,7 +73,7 @@ class Birds(Pipeline):
         print("NOTE: BirdNET's model and location filter are licensed CC BY-NC-SA 4.0: NON-COMMERCIAL use only. "
               "For commercial work use model: perch.", flush=True)
         from birdnet_analyzer.analyze import analyze  # type: ignore
-        from ..species_lists import SpeciesList, birdnet_week, file_date
+        from ..species_lists import SpeciesList, birdnet_week, file_date, flag_unlikely, keep_unlikely
 
         lat = params.get("lat", chunk.get("lat"))
         lon = params.get("lon", chunk.get("lon"))
@@ -104,7 +105,7 @@ class Birds(Pipeline):
             kwargs = {"min_conf": float(params["min_conf"]), "overlap": float(params["overlap"]), "rtype": "csv",
                       "threads": threads}
             if kind == "month":
-                kwargs["slist"] = str(self._birdnet_slist(slist, value, workdir))
+                kwargs["slist"] = str(self._birdnet_slist(slist, value, workdir, keep_unlikely(params)))
             elif kind == "week":
                 kwargs.update(lat=float(lat), lon=float(lon), week=int(value))
             analyze(str(audio_dir), str(out_dir), **kwargs)
@@ -127,6 +128,8 @@ class Birds(Pipeline):
             df.insert(0, "source_key", key)
             frames.append(df)
         det = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=BIRDNET_COLUMNS)
+        if slist is not None:
+            det = flag_unlikely(det, slist, chunk)
         try:
             from importlib.metadata import version
             models = {"birdnet-analyzer": version("birdnet-analyzer")}
@@ -138,11 +141,11 @@ class Birds(Pipeline):
         return ChunkResult(det, none, failed, models)
 
     @staticmethod
-    def _birdnet_slist(slist, month, workdir: Path) -> Path:
+    def _birdnet_slist(slist, month, workdir: Path, unlikely: bool = True) -> Path:
         """BirdNET's own species-list file ('Scientific_Common' lines) for one month of our list."""
         import birdnet_analyzer.config as cfg
         from ..species_lists import norm
-        wanted = slist.allowed(month)
+        wanted = slist.allowed(month, unlikely)
         lines = [l.strip() for l in open(cfg.BIRDNET_LABELS_FILE, encoding="utf-8") if l.strip()]
         keep = [l for l in lines if norm(l.split("_")[0]) in wanted]
         if not keep:
@@ -187,15 +190,16 @@ class Birds(Pipeline):
         hop = int(float(params["hop_seconds"]) * sr_model)
         thr = None if params.get("logit_threshold") in (None, "") else float(params["logit_threshold"])
         top_n = max(1, int(params.get("top_n") or 1))
-        from ..species_lists import SpeciesList, file_month, norm
+        from ..species_lists import SpeciesList, file_month, flag_unlikely, keep_unlikely, norm
         slist = SpeciesList(params["species_list"]) if params.get("species_list") else None
+        with_unlikely = keep_unlikely(params)
         label_names = [norm(lab) for lab in self._labels]
         masks: dict = {}
 
         def keep_for(key):
             m = file_month(key, chunk) if (slist and slist.monthly) else None
             if m not in masks:
-                allowed = slist.allowed(m) if slist else None
+                allowed = slist.allowed(m, with_unlikely) if slist else None
                 masks[m] = np.array([allowed is None or lab in allowed for lab in label_names])
             return masks[m]
 
@@ -240,6 +244,8 @@ class Birds(Pipeline):
             except Exception as e:  # noqa: BLE001
                 failed.append({"source_key": key, "filename": path.name, "status": "failed", "error": str(e)})
         det = pd.DataFrame(rows, columns=PERCH_COLUMNS)
+        if slist is not None:
+            det = flag_unlikely(det, slist, chunk)
         return ChunkResult(det, none, failed, {"perch_model": getattr(self, "_model_dir", ""),
                                                 "hop_seconds": params["hop_seconds"],
                                                 "logit_threshold": thr, "top_n": None if thr is not None else top_n,

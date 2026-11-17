@@ -254,3 +254,18 @@ def test_monthly_species_lists(tmp_path):
     assert file_date("SMA01234_20240705_043000.wav", {"device": "song-meter"}) == datetime(2024, 7, 5, 4, 30)
     assert birdnet_week(datetime(2024, 1, 1)) == 1 and birdnet_week(datetime(2024, 12, 31)) == 48
     assert birdnet_week(None) == -1
+
+
+def test_unlikely_months_are_kept_and_flagged(tmp_path):
+    import pandas as pd
+    from ceh_biomonitoring.species_lists import SpeciesList, flag_unlikely, keep_unlikely
+    f = tmp_path / "m.csv"
+    f.write_text("species,month,likelihood\nHirundo rustica,6,expected\nHirundo rustica,2,unlikely\n"
+                 "Erithacus rubecula,2,expected\n")
+    sl = SpeciesList(f)
+    assert "hirundo rustica" in sl.allowed(2)                       # an early Swallow is still reported
+    assert sl.allowed(2, unlikely=False) == {"erithacus rubecula"}
+    det = pd.DataFrame({"source_key": ["a/20260210_0500.wav", "a/20260210_0500.wav", "a/20260610_0500.wav"],
+                        "species_name": ["Hirundo rustica", "Erithacus rubecula", "Hirundo rustica"]})
+    assert list(flag_unlikely(det, sl)["unlikely_this_month"]) == [True, False, False]
+    assert keep_unlikely({}) and not keep_unlikely({"species_list_unlikely": "remove"})
