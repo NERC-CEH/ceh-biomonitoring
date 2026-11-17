@@ -56,3 +56,7 @@ ultrasonic/batdetect_ultrasonic/outputs/*
 
 ultrasonic/batdetect_ultrasonic/tmp/*
 !ultrasonic/batdetect_ultrasonic/tmp/.gitkeep
+
+# example data is meant to be in the repository
+!examples/**/*.wav
+!examples/**/*.jpg
