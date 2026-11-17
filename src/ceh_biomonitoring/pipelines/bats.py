@@ -79,9 +79,11 @@ class BatDetect(Pipeline):
             models = {}
         det = pd.DataFrame(rows, columns=COLUMNS)
         if params.get("species_list"):
-            from ..species_lists import norm, read
-            wanted = read(params["species_list"])
-            det["in_species_list"] = det["species_name"].map(lambda x: norm(x) in wanted)
+            from ..species_lists import SpeciesList, file_month, norm
+            slist = SpeciesList(params["species_list"])
+            month = {k: file_month(k, chunk) for k in det["source_key"].dropna().unique()}
+            det["in_species_list"] = [norm(sp) in slist.allowed(month.get(k))
+                                      for sp, k in zip(det["species_name"], det["source_key"])]
             if params.get("species_list_action") == "remove":
                 det = det[det["in_species_list"]]
             models["species_list"] = params["species_list"]

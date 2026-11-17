@@ -64,28 +64,51 @@ class Birds(Pipeline):
 
     # ------------------------------------------------------------------ BirdNET
     def _birdnet(self, files, chunk, params, workdir):
-        """Official BirdNET-Analyzer: analyse the whole chunk folder in one call (uses all the
-        job's CPUs), then read the one results CSV it writes per recording."""
+        """Official BirdNET-Analyzer. Recordings are analysed in groups that share a species list: one
+        group per month with a monthly list, one per BirdNET week when its own location filter follows
+        each recording's date, otherwise all together (one call uses all the job's CPUs)."""
         require("birdnet_analyzer", self.extra)
         import shutil
         print("NOTE: BirdNET's model and location filter are licensed CC BY-NC-SA 4.0: NON-COMMERCIAL use only. "
               "For commercial work use model: perch.", flush=True)
         from birdnet_analyzer.analyze import analyze  # type: ignore
+        from ..species_lists import SpeciesList, birdnet_week, file_date
 
         lat = params.get("lat", chunk.get("lat"))
         lon = params.get("lon", chunk.get("lon"))
-        audio_dir, out_dir = workdir / "audio", workdir / "birdnet_results"
-        audio_dir.mkdir(parents=True, exist_ok=True)
-        for _, path in files:
-            if path.parent != audio_dir:
-                shutil.move(str(path), audio_dir / path.name)
-        kwargs = {"min_conf": float(params["min_conf"]), "overlap": float(params["overlap"]), "rtype": "csv",
-                  "threads": int(os.environ.get("SLURM_CPUS_PER_TASK") or os.cpu_count() or 1)}
-        if params.get("species_list"):
-            kwargs["slist"] = str(self._birdnet_slist(params["species_list"], workdir))
-        elif lat is not None and lon is not None:
-            kwargs.update(lat=float(lat), lon=float(lon), week=int(params["week"]) if params.get("week") else -1)
-        analyze(str(audio_dir), str(out_dir), **kwargs)
+        slist = SpeciesList(params["species_list"]) if params.get("species_list") else None
+        geo = slist is None and lat is not None and lon is not None
+        fixed_week = int(params["week"]) if params.get("week") else None
+
+        # which group each recording belongs to
+        groups: dict = {}
+        for key, path in files:
+            d = file_date(key, chunk)
+            if slist is not None:
+                g = ("month", d.month if (d and slist.monthly) else None)
+            elif geo:
+                g = ("week", fixed_week if fixed_week else birdnet_week(d))
+            else:
+                g = ("all", None)
+            groups.setdefault(g, []).append((key, path))
+
+        out_dir = workdir / "birdnet_results"
+        threads = int(os.environ.get("SLURM_CPUS_PER_TASK") or os.cpu_count() or 1)
+        used = []
+        for (kind, value), members in sorted(groups.items(), key=lambda kv: str(kv[0])):
+            audio_dir = workdir / f"audio_{kind}_{value if value is not None else 'any'}"
+            audio_dir.mkdir(parents=True, exist_ok=True)
+            for _, path in members:
+                if path.parent != audio_dir:
+                    shutil.move(str(path), audio_dir / path.name)
+            kwargs = {"min_conf": float(params["min_conf"]), "overlap": float(params["overlap"]), "rtype": "csv",
+                      "threads": threads}
+            if kind == "month":
+                kwargs["slist"] = str(self._birdnet_slist(slist, value, workdir))
+            elif kind == "week":
+                kwargs.update(lat=float(lat), lon=float(lon), week=int(value))
+            analyze(str(audio_dir), str(out_dir), **kwargs)
+            used.append({kind: value, "files": len(members)})
 
         frames, none, failed = [], [], []
         for key, path in files:
@@ -109,23 +132,26 @@ class Birds(Pipeline):
             models = {"birdnet-analyzer": version("birdnet-analyzer")}
         except Exception:  # noqa: BLE001
             models = {}
-        models.update({"geo_model": bool(lat is not None and lon is not None and not params.get("species_list")),
-                       "species_list": params.get("species_list") or None, "licence": "CC BY-NC-SA 4.0"})
+        models.update({"geo_model": geo, "species_list": params.get("species_list") or None,
+                       "species_list_kind": slist.describe() if slist else None, "groups": used,
+                       "licence": "CC BY-NC-SA 4.0"})
         return ChunkResult(det, none, failed, models)
 
     @staticmethod
-    def _birdnet_slist(species_list: str, workdir: Path) -> Path:
-        """BirdNET's own species-list file ('Scientific_Common' lines) for the species in our list."""
+    def _birdnet_slist(slist, month, workdir: Path) -> Path:
+        """BirdNET's own species-list file ('Scientific_Common' lines) for one month of our list."""
         import birdnet_analyzer.config as cfg
-        from ..species_lists import norm, read
-        wanted = read(species_list)
+        from ..species_lists import norm
+        wanted = slist.allowed(month)
         lines = [l.strip() for l in open(cfg.BIRDNET_LABELS_FILE, encoding="utf-8") if l.strip()]
         keep = [l for l in lines if norm(l.split("_")[0]) in wanted]
         if not keep:
-            raise SystemExit(f"None of the species in {species_list} are in BirdNET's list")
-        out = workdir / "birdnet_species_list.txt"
+            raise SystemExit(f"None of the species in {slist.path} ({'month ' + str(month) if month else 'all year'}) "
+                             f"are in BirdNET's list")
+        out = workdir / f"birdnet_species_list_{month or 'all'}.txt"
         out.write_text("".join(line + "\n" for line in keep), encoding="utf-8")
-        print(f"Species list: {len(keep)} of BirdNET's species ({len(wanted)} names in {species_list})", flush=True)
+        print(f"Species list {'for month ' + str(month) if month else '(all year)'}: {len(keep)} of BirdNET's species",
+              flush=True)
         return out
 
     # ------------------------------------------------------------------ Perch
@@ -161,11 +187,17 @@ class Birds(Pipeline):
         hop = int(float(params["hop_seconds"]) * sr_model)
         thr = None if params.get("logit_threshold") in (None, "") else float(params["logit_threshold"])
         top_n = max(1, int(params.get("top_n") or 1))
-        allowed = None
-        if params.get("species_list"):
-            from ..species_lists import norm, read
-            allowed = read(params["species_list"])
-        keep = np.array([allowed is None or norm(lab) in allowed for lab in self._labels])
+        from ..species_lists import SpeciesList, file_month, norm
+        slist = SpeciesList(params["species_list"]) if params.get("species_list") else None
+        label_names = [norm(lab) for lab in self._labels]
+        masks: dict = {}
+
+        def keep_for(key):
+            m = file_month(key, chunk) if (slist and slist.monthly) else None
+            if m not in masks:
+                allowed = slist.allowed(m) if slist else None
+                masks[m] = np.array([allowed is None or lab in allowed for lab in label_names])
+            return masks[m]
 
         rows, none, failed = [], [], []
         score_dir = workdir / "keep" / "perch_scores"   # anything under keep/ is saved with the outputs
@@ -185,7 +217,7 @@ class Birds(Pipeline):
                     logits.append(res["label"].numpy())
                     emb.append(res["embedding"].numpy().astype(np.float16))
                 lab = np.concatenate(logits) if logits else np.zeros((0, len(self._labels)), np.float32)
-                lab_kept = np.where(keep[None, :], lab, -np.inf)
+                lab_kept = np.where(keep_for(key)[None, :], lab, -np.inf)
                 if thr is not None:                       # your own cut-off
                     w_idx, c_idx = np.nonzero(lab_kept >= thr)
                 else:                                     # no cut-off: each window's top species
@@ -211,4 +243,6 @@ class Birds(Pipeline):
         return ChunkResult(det, none, failed, {"perch_model": getattr(self, "_model_dir", ""),
                                                 "hop_seconds": params["hop_seconds"],
                                                 "logit_threshold": thr, "top_n": None if thr is not None else top_n,
+                                                "species_list": params.get("species_list") or None,
+                                                "species_list_kind": slist.describe() if slist else None,
                                                 "licence": "Apache 2.0"})

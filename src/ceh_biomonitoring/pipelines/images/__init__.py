@@ -212,12 +212,21 @@ class Images(Pipeline):
                            or chunk.get("deployment_id"))
         rules = F.load_rules(params.get("filters"))
         thr, cap, bs = float(params["box_threshold"]), int(params["max_crops_per_image"]), int(params["batch_size"])
-        allowed = None
+        slist, list_masks = None, {}
         if params.get("species_list") and M["species"] is not None:
-            from ...species_lists import norm, read
-            wanted = read(params["species_list"])
-            allowed = np.array([norm(lab) in wanted for lab in M["species_labels"]])
-            print(f"Species list: {int(allowed.sum())} of the model's {len(allowed)} species", flush=True)
+            from ...species_lists import SpeciesList, norm
+            slist = SpeciesList(params["species_list"])
+            label_names = [norm(lab) for lab in M["species_labels"]]
+            print(f"Species list: {slist.describe()}", flush=True)
+
+        def list_mask(month):
+            if slist is None:
+                return None
+            m = month if slist.monthly else None
+            if m not in list_masks:
+                wanted = slist.allowed(m)
+                list_masks[m] = np.array([lab in wanted for lab in label_names])
+            return list_masks[m]
         crop_dir = workdir / "keep" / "crops"
         overlay_dir = workdir / "keep" / "overlays"
         if params.get("save_overlays"):
@@ -315,6 +324,7 @@ class Images(Pipeline):
                         if want:
                             probs, emb = nets.species_scores(M["species"], batch[want])
                             for w_i, j in enumerate(want):
+                                allowed = list_mask(dt.month if dt else None)
                                 ranked = np.where(allowed, probs[w_i], -1.0) if allowed is not None else probs[w_i]
                                 top = ranked.argsort()[-top_n:][::-1]
                                 kept[s + j]["_species"] = ([M["species_labels"][t] for t in top]

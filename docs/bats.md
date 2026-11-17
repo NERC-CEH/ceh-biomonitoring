@@ -25,7 +25,7 @@ cehbio run bats --folder E:/my_recordings --deployment wood-1
 | Setting | Default | Meaning |
 |---|---|---|
 | `detection_threshold` | `0.3` | calls scoring below this are left out. Lower finds more calls but more false ones |
-| `species_list` | | a CSV with a `species` column, e.g. bats recorded near the site: calls of other species are flagged (`in_species_list`) |
+| `species_list` | | a CSV with a `species` column (and optionally `month`, so each recording uses its own month's species), e.g. bats recorded near the site: calls of other species are flagged (`in_species_list`) |
 | `species_list_action` | `flag` | `remove` drops calls of unlisted species instead |
 
 e.g. `cehbio run bats --folder E:/rec --deployment wood-1 --set detection_threshold=0.5`

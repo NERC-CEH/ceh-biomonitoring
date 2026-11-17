@@ -238,3 +238,19 @@ def test_species_list_reading(tmp_path):
     bad.write_text("name\nx\n")
     with pytest.raises(SystemExit):
         read(bad)
+
+
+def test_monthly_species_lists(tmp_path):
+    from datetime import datetime
+    from ceh_biomonitoring.species_lists import SpeciesList, birdnet_week, file_date, file_month
+    f = tmp_path / "m.csv"
+    f.write_text("species,month\nHirundo rustica,5\nHirundo rustica,6\nErithacus rubecula,\nTurdus iliacus,1\n")
+    sl = SpeciesList(f)
+    assert sl.monthly and sl.allowed(5) == {"hirundo rustica", "erithacus rubecula"}
+    assert sl.allowed(1) == {"turdus iliacus", "erithacus rubecula"}            # no Swallow in January
+    assert sl.allowed(None) == {"hirundo rustica", "erithacus rubecula", "turdus iliacus"}
+    assert file_month("x/20240705_043000.WAV") == 7 and file_month("site_2024-11-02_dawn.wav") == 11
+    assert file_month("nodate.wav") is None
+    assert file_date("SMA01234_20240705_043000.wav", {"device": "song-meter"}) == datetime(2024, 7, 5, 4, 30)
+    assert birdnet_week(datetime(2024, 1, 1)) == 1 and birdnet_week(datetime(2024, 12, 31)) == 48
+    assert birdnet_week(None) == -1
