@@ -41,12 +41,22 @@ def _device(pipeline, args) -> dict | None:
     return d
 
 
+def config_path(spec: str) -> Path:
+    """A settings file: a path, or pkg:<package>/<file> for one shipped in an installed package
+    (e.g. a plug-in's tuned settings)."""
+    if str(spec).startswith("pkg:"):
+        from importlib import resources
+        pkg, _, rel = str(spec)[4:].partition("/")
+        return Path(str(resources.files(pkg).joinpath(rel)))
+    return Path(spec).expanduser()
+
+
 def _params(pipeline, args, device: dict | None = None) -> dict:
     """pipeline defaults < machine/team settings (pipeline_defaults.<name>) < device < --config < --set"""
     over: dict = dict((_settings(args).get(f"pipeline_defaults.{pipeline.name}") or {}))
     over.update(devices.pipeline_params(device, pipeline.name) if device else {})
     if getattr(args, "config", None):
-        cfg = yaml.safe_load(Path(args.config).read_text()) or {}
+        cfg = yaml.safe_load(config_path(args.config).read_text(encoding="utf-8")) or {}
         over.update(cfg.get(pipeline.name, cfg))
     for item in getattr(args, "set", None) or []:
         k, _, v = item.partition("=")

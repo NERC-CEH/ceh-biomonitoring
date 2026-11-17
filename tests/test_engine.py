@@ -219,3 +219,10 @@ def test_status_and_combine_default_to_local_results(settings):
     a = build_parser().parse_args(["run", "bats", "--deployment", "wood-1"])
     with pytest.raises(SystemExit):
         _where(settings, a)
+
+
+def test_config_from_an_installed_package():
+    from ceh_biomonitoring.cli import config_path
+    p = config_path("pkg:ceh_biomonitoring/profiles/defaults.yml")
+    assert p.exists() and p.name == "defaults.yml"
+    assert config_path("~/x.yml").is_absolute()
