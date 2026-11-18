@@ -83,10 +83,11 @@ def fingerprint(pipeline: str, extra: list[str] = ()) -> str:
     return hashlib.sha256(text.encode()).hexdigest()[:8]
 
 
-def run(pipeline: str, settings, extra: list[str]) -> bool:
+def run(pipeline: str, settings, extra: list[str], profile: str | None = None) -> bool:
     import pandas as pd
+    import subprocess
+    import sys
     from . import pipelines, runner
-    from .cli import main
     p = pipelines.get(pipeline)
     try:
         p.check_installed()
@@ -96,8 +97,11 @@ def run(pipeline: str, settings, extra: list[str]) -> bool:
     folder = get(pipeline, settings)
     dep = f"example-{pipeline}-{fingerprint(pipeline, extra)}"
     print(f"\n=== {pipeline}: {manifest()[pipeline]['about']}\n    files: {folder}", flush=True)
-    main(["run", pipeline, "--folder", str(folder), "--deployment", dep, "--here",
-          *manifest()[pipeline].get("run", []), *extra])
+    # each example in its own process: the pipelines' libraries (TensorFlow, numba, torch) each bring
+    # their own LLVM, and loading them all into one process crashes
+    subprocess.run([sys.executable, "-m", "ceh_biomonitoring", "run", pipeline, "--folder", str(folder),
+                    "--deployment", dep, "--here", *(["--profile", profile] if profile else []),
+                    *manifest()[pipeline].get("run", []), *extra], check=False)
     out = runner.deployment_dir(settings, p, "local", dep) / f"{dep}_{p.output_name}.parquet"
     det = pd.read_parquet(out) if out.exists() else pd.DataFrame()
     ok, msg = check(pipeline, det, manifest()[pipeline].get("expect", {}))
@@ -130,7 +134,7 @@ def add_command(sub, common) -> None:
                 print(f"{n}: {get(n, s)}")
             return
         extra = [x for kv in a.set for x in ("--set", kv)]
-        results = {n: run(n, s, extra) for n in names}
+        results = {n: run(n, s, extra, getattr(a, "profile", None)) for n in names}
         if not all(results.values()):
             raise SystemExit("Some examples didn't give the expected result: see PROBLEM above.")
     p.set_defaults(func=go)
