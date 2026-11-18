@@ -89,7 +89,7 @@ This toolkit runs models made by other teams. **Check each model's licence befor
 
 **Keeping up to date:** the newest version of each model is always used. Run `cehbio update` now and then; `cehbio versions` and `cehbio models` show what you're using. Older image models stay available by name to reproduce past results.
 
-**Acknowledgements.** The images pipeline's processing builds on [amber-inferences](https://github.com/AMI-system/amber-inferences) (MIT) from the AMI system team, and on the AMBER and INSPIRE projects. Manual validation packages crops for [Mothbot](https://mothbot-classify.vercel.app) (Digital Naturalism Laboratories) and groups similar crops with [DINOv2](https://github.com/facebookresearch/dinov2) (Meta, Apache 2.0). We thank all the teams above for making their models and code openly available.
+**Acknowledgements.** The images pipeline's processing builds on [amber-inferences](https://github.com/AMI-system/amber-inferences) (MIT) from the AMI system team, and on the AMBER and INSPIRE projects. Manual validation packages crops for [Mothbot](https://mothbot-classify.vercel.app) (Digital Naturalism Laboratories) and groups similar crops with [DINOv2](https://github.com/facebookresearch/dinov2) (Meta, Apache 2.0); its species lists come from [GBIF](https://www.gbif.org) on the [GBIF Backbone Taxonomy](https://doi.org/10.15468/39omei). We thank all the teams above for making their models and code openly available.
 
 ## Getting help
 

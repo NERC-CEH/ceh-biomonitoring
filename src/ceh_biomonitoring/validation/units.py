@@ -93,11 +93,28 @@ def result_files(paths: list[str], group: str) -> list[Path]:
 
 
 # the columns units need (results can have dozens more; reading only these keeps memory down)
+# (the global model's columns go into Mothbot's machine identifications, with their GBIF backbone keys)
+GLOBAL_COLUMNS = ["global_species_rank_1_name", "global_species_rank_1_confidence", "global_species_rank_1_gbif_id",
+                  "global_species_rank_1_backbone_genus_name", "global_species_rank_1_backbone_family_name",
+                  "global_model_key", "global_model_version"]
 IMAGE_COLUMNS = {"image_path", "source_key", "image_datetime", "bucket_name", "deployment_name", "deployment_id",
                  "country_folder", "x_min", "y_min", "x_max", "y_max", "crop_area", "box_score", "class_name",
                  "class_confidence", "order_name", "order_confidence", SPECIES, SCORE, "track_id",
-                 "rank_1_unlikely_this_month", "global_species_rank_1_backbone_family_name", "latitude", "longitude",
-                 *IMAGE_ALIASES}
+                 "rank_1_unlikely_this_month", "latitude", "longitude", "analysis_datetime", "species_model",
+                 *GLOBAL_COLUMNS, *IMAGE_ALIASES}
+REPEATING = {"analysis_datetime", "class_name", "order_name", "species_model", "bucket_name", "deployment_name",
+             "country_folder", SPECIES, "top_species_prediction", *GLOBAL_COLUMNS}
+PHOTO_TYPES = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".heif", ".webp", ".bmp"}
+
+
+def not_photos(paths: pd.Series) -> pd.Series:
+    """Rows whose 'photo' can't be one: Windows Recycle Bin copies ($R..., $I...), and names without a
+    photo file type (broken rows)."""
+    uniq = pd.Series(pd.unique(paths.astype(str)))          # each distinct photo once
+    names = uniq.str.replace("\\", "/", regex=False).str.rsplit("/", n=1).str[-1]
+    ext = names.str.extract(r"(\.[A-Za-z0-9]+)$", expand=False).str.lower()
+    bad = uniq[names.str.match(r"^\$[RI][A-Z0-9]{6}") | ~ext.isin(PHOTO_TYPES)]
+    return paths.astype(str).isin(set(bad)) if len(bad) else pd.Series(False, index=paths.index)
 
 
 def read_file(f: Path, group: str) -> pd.DataFrame:
@@ -108,7 +125,15 @@ def read_file(f: Path, group: str) -> pd.DataFrame:
             data = ds.dataset(f, format="parquet")
             cols = [c for c in data.schema.names if c in IMAGE_COLUMNS]
             box = "x_min" if "x_min" in cols else None
-            d = data.to_table(columns=cols, filter=pc.field(box).is_valid() if box else None).to_pandas()
+            t = data.to_table(columns=cols, filter=pc.field(box).is_valid() if box else None)
+            # text that repeats (names, models, run times) is read as categories: millions of rows stay small
+            # (photo paths and photo times stay as text: nearly every value differs)
+            import pyarrow as pa
+            for i, name in enumerate(t.column_names):
+                if name in REPEATING and pa.types.is_string(t.schema.field(name).type) or (
+                        name in REPEATING and pa.types.is_large_string(t.schema.field(name).type)):
+                    t = t.set_column(i, name, pc.dictionary_encode(t.column(name)))
+            d = t.to_pandas()
         else:
             d = pd.read_parquet(f)
     else:
@@ -124,11 +149,21 @@ def read_results(paths: list[str], group: str) -> pd.DataFrame:
 
 
 def _when_audio(det: pd.DataFrame) -> pd.Series:
-    if "file_datetime" in det.columns and det["file_datetime"].notna().any():
-        return pd.to_datetime(det["file_datetime"], errors="coerce")
-    from ..species_lists import file_date
+    """The recording's time: from the results (any layout), else the file name (date and time, or the
+    date alone)."""
+    from .. import times
     keys = det["source_key"].astype(str)
-    return pd.to_datetime(keys.map({k: file_date(k) for k in keys.unique()}), errors="coerce")
+    col = times.parse(det["file_datetime"]) if "file_datetime" in det.columns else None
+    found = {}
+    for k in keys.unique():
+        dt = times.from_name(k)
+        found[k] = dt if dt else times.date_from_name(k)
+    from_file = pd.to_datetime(keys.map(found), errors="coerce")
+    from_file.index = det.index
+    if col is None:
+        return from_file
+    col.index = det.index
+    return col.fillna(from_file)
 
 
 def period_of(when: pd.Series, kind: str) -> pd.Series:
@@ -205,6 +240,15 @@ def image_units(df: pd.DataFrame, per_crop: bool = False, min_crop_area: float |
         df = df[df["crop_area"] <= max_crop_area]
     if df.empty:
         return pd.DataFrame(columns=UNIT_COLUMNS)
+    path_col = "image_path" if "image_path" in df.columns else "source_key"
+    junk = not_photos(df[path_col])
+    if junk.any():
+        dep = df["deployment_id"].iloc[0] if "deployment_id" in df.columns else ""
+        print(f"  NOTE {dep}: {int(junk.sum())} detections on {df.loc[junk, path_col].nunique()} files that aren't "
+              f"trap photos (Recycle Bin copies or broken rows) are left out", flush=True)
+        df = df[~junk]
+        if df.empty:
+            return pd.DataFrame(columns=UNIT_COLUMNS)
     sp = _first(df, SPECIES, "").astype("string").fillna("").str.strip()
     order = _first(df, "order_name", "").astype("string").fillna("").str.strip()
     moth = _first(df, "class_name", "").astype("string").fillna("").str.lower().eq("moth")
@@ -232,7 +276,16 @@ def image_units(df: pd.DataFrame, per_crop: bool = False, min_crop_area: float |
     u = pd.concat([cand, noise], ignore_index=True)
     u["group"], u["score"], u["score_type"] = "images", u.get(SCORE), SCORE
     u["unlikely"] = _first(u, "rank_1_unlikely_this_month", False).fillna(False).astype(bool)
-    u["when"] = pd.to_datetime(_first(u, "image_datetime"), errors="coerce")
+    from .. import times
+    when, src, n = times.best(u["image_datetime"] if "image_datetime" in u.columns else None, u["image_path"])
+    u["when"], u["time_source"] = when.to_numpy(), src.to_numpy()
+    dep = u["deployment_id"].iloc[0] if len(u) else ""
+    if n:
+        print(f"  NOTE {dep}: {n} photos' times in the results differ from their file names (clock "
+              f"corrections when the results were made, usually): the results' times are used", flush=True)
+    if (src == "unknown").any():
+        print(f"  NOTE {dep}: {int((src == 'unknown').sum())} units have no time in the results or file name "
+              f"(Mothbot packages try the photo's EXIF)", flush=True)
     u["period"] = period_of(u["when"], "night")
     u["site"] = u["deployment_id"]
     u["bucket"] = _first(u, "bucket_name")
@@ -243,7 +296,7 @@ def image_units(df: pd.DataFrame, per_crop: bool = False, min_crop_area: float |
 # (not photo paths or times: nearly every value differs, and huge category lists slow every join down)
 CATEGORY_COLUMNS = {"group", "site", "deployment_id", "deployment_name", "country_folder", "bucket", "bucket_name",
                     "period", "species", "score_type", "noise_class", "results", "class_name", "order_name",
-                    "common_name", "global_species_rank_1_backbone_family_name"}
+                    "common_name", "time_source", "species_model", *GLOBAL_COLUMNS[:1], *GLOBAL_COLUMNS[3:]}
 
 
 def _order(u: pd.DataFrame) -> pd.DataFrame:

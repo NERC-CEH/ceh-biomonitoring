@@ -41,6 +41,25 @@ def _slurm(a, step: str, gpu: bool) -> bool:
     return True
 
 
+def _warm_species_cache(a) -> None:
+    """Before a batch job: fetch the GBIF species lists here, where there's internet, so the job finds
+    them in the cache."""
+    import pandas as pd
+    from ..settings import Settings
+    try:
+        sel = pd.read_csv(a.selection, low_memory=False)
+        if str(sel["group"].iloc[0]) != "images":
+            return
+        from .platforms import mothbot as M
+        print("Fetching the GBIF species lists for the job ...", flush=True)
+        groups = [sel] if a.one_package else [d for _, d in sel.groupby("deployment_id", sort=True)]
+        for rows in groups:
+            M.species_for(rows, Settings.load(getattr(a, "profile", None)), a.species_list, a.species_taxon, False, "",
+                          with_global=a.blind is False)
+    except Exception as e:  # noqa: BLE001 - the job will still try itself
+        print(f"  (couldn't fetch them now: {e})", flush=True)
+
+
 def add_command(sub, common) -> None:
     p = sub.add_parser("validate", help="choose results for experts to check, package them, read answers back",
                        description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -127,9 +146,18 @@ def add_command(sub, common) -> None:
     q.add_argument("--bucket", help="object-store bucket the recordings or photos are in, if the results don't say")
     q.add_argument("--source-root", help="a folder holding the recordings or photos (searched by file name)")
     q.add_argument("--blind", dest="blind", action="store_true", default=None,
-                   help="hide the model's labels from the expert (default: audio model selections, and all "
-                        "Mothbot packages; --no-blind shows them)")
-    q.add_argument("--no-blind", dest="blind", action="store_false")
+                   help="hide the models' identifications from the expert (default: audio model selections, and "
+                        "all Mothbot packages; --no-blind shows them)")
+    q.add_argument("--no-blind", "--show-machine-ids", dest="blind", action="store_false",
+                   help="show them: Mothbot gets each model's identification in its machine-ID format")
+    q.add_argument("--species-list", help="mothbot: your own species list for the package (a GBIF species-list "
+                                          "download, or any CSV with a species column). Default: GBIF's list for "
+                                          "the country plus every species the models named, on the GBIF backbone")
+    q.add_argument("--no-species-list", action="store_true", help="mothbot: don't add a species list")
+    q.add_argument("--species-taxon", default="Lepidoptera",
+                   help="mothbot: the group the country list covers (default Lepidoptera; e.g. Insecta)")
+    q.add_argument("--offline", action="store_true",
+                   help="mothbot: don't ask GBIF, use only what's cached (compute nodes without internet)")
     q.add_argument("--clip-seconds", type=float, help="audio-clips: clip length (birds 30; bats: the pass)")
     q.add_argument("--pad-seconds", type=float, default=1.0, help="audio-clips, bats: added either side of a pass")
     q.add_argument("--screen", nargs="*", default=[], help="mothbot: reference .npz files of things to leave out "
@@ -144,6 +172,8 @@ def add_command(sub, common) -> None:
 
     def run_prepare(a):
         import pandas as pd
+        if getattr(a, "slurm", False) and not a.no_species_list and not a.offline:
+            _warm_species_cache(a)                         # compute nodes may have no internet
         if _slurm(a, "prepare", gpu=True):
             return
         from ..settings import Settings
@@ -160,7 +190,9 @@ def add_command(sub, common) -> None:
                           bucket=a.bucket, source_root=a.source_root, clip_seconds=a.clip_seconds,
                           pad_seconds=a.pad_seconds, screens=a.screen, cluster=not a.no_cluster,
                           cluster_method=a.cluster_method, min_cluster_size=a.min_cluster_size,
-                          one_package=a.one_package, keep_unzipped=a.keep_unzipped)
+                          one_package=a.one_package, keep_unzipped=a.keep_unzipped,
+                          species_list="none" if a.no_species_list else a.species_list,
+                          species_taxon=a.species_taxon, offline=a.offline)
         print(f"\nDone: {res}")
         print(f"When the experts are finished: cehbio validate collect {a.selection} {a.out} --out <answers.csv>")
     q.set_defaults(func=run_prepare)

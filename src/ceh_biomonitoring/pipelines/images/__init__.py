@@ -18,7 +18,6 @@ The processing follows amber-inferences (AMI-system, MIT licence), so results ma
 from __future__ import annotations
 
 import os
-import re
 from datetime import datetime, time, timedelta
 from pathlib import Path
 
@@ -61,8 +60,6 @@ def species_model_for(region: str, models: dict | None = None) -> str:
 
 
 # ----------------------------------------------------------------------------- dates and nights
-_AMI_MINI = re.compile(r"(20\d{6})T(\d{6})")
-_PLAIN = re.compile(r"(20\d{12})")
 
 
 def image_datetime(key: str, device: dict | None = None, pattern: str | None = None) -> datetime | None:
@@ -71,13 +68,8 @@ def image_datetime(key: str, device: dict | None = None, pattern: str | None = N
         dt = devices.parse_filename(key, device, pattern)["file_datetime"]
         if dt:
             return datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
-    name = Path(key).name
-    m = _AMI_MINI.search(name)
-    s = m.group(1) + m.group(2) if m else (_PLAIN.search(name).group(1) if _PLAIN.search(name) else None)
-    try:
-        return datetime.strptime(s, "%Y%m%d%H%M%S") if s else None
-    except ValueError:
-        return None
+    from ... import times                       # every layout the toolkit knows (AMI, AMI-mini, Mothbox ...)
+    return times.from_name(Path(key).name)
 
 
 def recording_session(dt: datetime | None) -> str:

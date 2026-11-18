@@ -10,6 +10,52 @@ from ceh_biomonitoring.validation import sampling as S
 from ceh_biomonitoring.validation import units as U
 
 
+# ------------------------------------------------------------------ a made-up GBIF (no internet in tests)
+TAXA = {
+    797: {"key": 797, "scientificName": "Lepidoptera", "canonicalName": "Lepidoptera", "rank": "ORDER",
+          "taxonomicStatus": "ACCEPTED", "kingdom": "Animalia", "phylum": "Arthropoda", "class": "Insecta",
+          "order": "Lepidoptera", "kingdomKey": 1, "phylumKey": 54, "classKey": 216, "orderKey": 797},
+    811: {"key": 811, "scientificName": "Diptera", "canonicalName": "Diptera", "rank": "ORDER",
+          "taxonomicStatus": "ACCEPTED", "kingdom": "Animalia", "phylum": "Arthropoda", "class": "Insecta",
+          "order": "Diptera", "kingdomKey": 1, "phylumKey": 54, "classKey": 216, "orderKey": 811},
+    1794467: {"key": 1794467, "scientificName": "Noctua pronuba (Linnaeus, 1758)", "canonicalName": "Noctua pronuba",
+              "rank": "SPECIES", "taxonomicStatus": "ACCEPTED", "kingdom": "Animalia", "phylum": "Arthropoda",
+              "class": "Insecta", "order": "Lepidoptera", "family": "Noctuidae", "genus": "Noctua",
+              "species": "Noctua pronuba", "orderKey": 797, "speciesKey": 1794467,
+              "vernacularName": "Large Yellow Underwing"},
+    1987000: {"key": 1987000, "scientificName": "Biston betularia (Linnaeus, 1758)", "canonicalName": "Biston betularia",
+              "rank": "SPECIES", "taxonomicStatus": "ACCEPTED", "kingdom": "Animalia", "phylum": "Arthropoda",
+              "class": "Insecta", "order": "Lepidoptera", "family": "Geometridae", "genus": "Biston",
+              "species": "Biston betularia", "orderKey": 797, "speciesKey": 1987000},
+    5555: {"key": 5555, "scientificName": "Agrius convolvuli (Linnaeus, 1758)", "canonicalName": "Agrius convolvuli",
+           "rank": "SPECIES", "taxonomicStatus": "ACCEPTED", "kingdom": "Animalia", "phylum": "Arthropoda",
+           "class": "Insecta", "order": "Lepidoptera", "family": "Sphingidae", "genus": "Agrius",
+           "species": "Agrius convolvuli", "orderKey": 797, "speciesKey": 5555},
+}
+
+
+@pytest.fixture(autouse=True)
+def fake_gbif(tmp_path, monkeypatch):
+    from ceh_biomonitoring.validation import gbif
+    monkeypatch.setattr(gbif, "cache_dir", lambda settings=None: tmp_path / "gbif-cache")
+    by_name = {t["canonicalName"]: k for k, t in TAXA.items()}
+
+    def get(self, path, **params):
+        if path == "species/match":
+            k = by_name.get(params["name"])
+            return {"usageKey": k, "matchType": "EXACT", "confidence": 99} if k else {"matchType": "NONE"}
+        if path.startswith("species/"):
+            t = TAXA.get(int(path.split("/")[1]))
+            return dict(t, datasetKey=gbif.BACKBONE) if t else None
+        if path == "enumeration/country":
+            return [{"iso2": "SG", "iso3": "SGP", "title": "Singapore"}]
+        if path == "occurrence/search":
+            got = [{"name": "5555", "count": 12}, {"name": "1794467", "count": 3}] if params["country"] == "SG" else []
+            return {"facets": [{"field": "SPECIES_KEY", "counts": got[params["facetOffset"]:]}]}
+        return None
+    monkeypatch.setattr(gbif.Backbone, "_get", get)
+
+
 # ------------------------------------------------------------------ made-up results
 def bird_det():
     rows = []
@@ -258,3 +304,92 @@ def test_detection_ids_match_the_labelling_pipeline():
                        "x_min": [10, 0.1 + 0.2], "y_min": [2.5, 3], "x_max": [100, 4], "y_max": [7, 1e-7]})
     assert U.detection_ids(df) == [U.detection_id(*r) for r in df[["deployment_id", "image_path", "x_min", "y_min",
                                                                      "x_max", "y_max"]].itertuples(index=False)]
+
+
+# ------------------------------------------------------------------ times, file types, species lists, machine IDs
+def test_times_are_read_whatever_their_layout():
+    from ceh_biomonitoring import times as T
+    got = T.parse(pd.Series(["2024-11-01 20:57:39", "2024-11-01T20:57:39+08:00", "2024:11:01 20:57:39",
+                             "20241101205739", None, "", "not a time"], dtype=object))
+    assert got.iloc[:4].eq(pd.Timestamp("2024-11-01 20:57:39")).all() and got.iloc[4:].isna().all()
+    assert T.parse(pd.Series([1730494659, 1730494659000])).eq(pd.Timestamp("2024-11-01 20:57:39")).all()
+    for name, want in [("20240725204340-snapshot.jpg", "2024-07-25 20:43:40"),
+                       ("01-20240204211800-snapshot.jpg", "2024-02-04 21:18:00"),
+                       ("ami-mini-20250428T210338.jpg", "2025-04-28 21:03:38"),
+                       ("123456789012345-20260806T025318.jpg", "2026-08-06 02:53:18"),
+                       ("bowedBarbo_2026-07-06T22-03-07+02-00.jpg", "2026-07-06 22:03:07"),
+                       ("SMA01234_20240705_043000.wav", "2024-07-05 04:30:00")]:
+        assert str(T.from_name(name)) == want, name
+    assert T.from_name("$R6USYHX.jpg") is None
+    # the results win over the file name (they carry clock corrections); the file name fills gaps
+    when, src, n = T.best(["2024-11-06 19:00:00", None], ["20230519003840-snapshot.jpg", "20240101210000-snapshot.jpg"])
+    assert list(src) == ["results", "file name"] and n == 1 and when[1] == pd.Timestamp("2024-01-01 21:00:00")
+
+
+def test_image_units_skip_recycle_bin_and_broken_rows_and_use_file_times():
+    rows = image_rows()
+    junk = rows.iloc[:2].assign(image_path=["$RVRFTOJ.jpg", "319502299373"])
+    no_time = rows.iloc[[11]].assign(image_path="20260603221500-snapshot.jpg", image_datetime=None, track_id="z")
+    u = U.image_units(pd.concat([rows, junk, no_time], ignore_index=True))
+    assert not u["image_path"].isin(["$RVRFTOJ.jpg", "319502299373"]).any()
+    z = u[u["image_path"] == "20260603221500-snapshot.jpg"].iloc[0]
+    assert z["time_source"] == "file name" and z["period"] == "2026-06-03"
+
+
+def test_mothbot_package_has_a_gbif_backbone_species_list(tmp_path):
+    pytest.importorskip("PIL")
+    from ceh_biomonitoring.validation.platforms import mothbot
+    sel = S.site_lists(U.image_units(photos(tmp_path, image_rows())), "images", per_species=2, noise=1)
+    mothbot.prepare(sel, tmp_path / "pkgs", cluster=False, keep_unzipped=True, round_date="2026-11-18")
+    pkg = tmp_path / "pkgs" / "dep1" / "2026-11-18_site-lists"
+    man = json.loads((pkg / "dataset.json").read_text())
+    assert man["species_lists"] == ["species/SpeciesList_Singapore_Lepidoptera-GBIF-backbone-2026-11-18.csv"]
+    t = pd.read_csv(pkg / man["species_lists"][0], sep="\t")
+    assert {"taxonKey", "scientificName", "species", "family", "numberOfOccurrences"} <= set(t.columns)
+    # the country's GBIF list (Agrius) and the species the models named (Noctua), with backbone keys
+    assert {5555, 1794467} <= set(t["taxonKey"].dropna().astype(int))
+    assert t.set_index("taxonKey").loc[5555, "numberOfOccurrences"] == 12
+    assert not (pkg / "03_classifications" / "_bot.ndjson").exists()     # still blind by default
+    deps = mothbot.read_ndjson(pkg / "02_records" / "deployments.ndjson")
+    first = min(c["night_date"] for c in mothbot.read_ndjson(pkg / "02_records" / "camera-days.ndjson"))
+    assert deps[0]["device_id_from_folder"] == "dep1 name" and deps[0]["deployment_start_from_folder"] == first
+    assert mothbot.check(pkg) == []
+
+
+def test_mothbot_machine_ids_follow_mothbots_format_when_shown(tmp_path):
+    pytest.importorskip("PIL")
+    from ceh_biomonitoring.validation.platforms import mothbot
+    rows = image_rows().assign(global_species_rank_1_name="Biston betularia", global_species_rank_1_gbif_id=1987000.0,
+                               global_species_rank_1_confidence=0.3, global_model_key="global_hierarchical_classifier",
+                               analysis_datetime="2026-06-10 14:55:41")
+    sel = S.site_lists(U.image_units(photos(tmp_path, rows)), "images", per_species=1, noise=1)
+    mothbot.prepare(sel, tmp_path / "pk", cluster=False, keep_unzipped=True, round_date="2026-11-18", blind=False)
+    pkg = tmp_path / "pk" / "dep1" / "2026-11-18_site-lists"
+    bot = mothbot.read_ndjson(pkg / "03_classifications" / "_bot.ndjson")
+    moth = [b for b in bot if b["taxon"].get("scientificName") == "Noctua pronuba"][0]
+    assert moth["classifier_type"] == "bot" and moth["classified_at"] == 1          # the default machine ID
+    assert moth["taxon"]["taxonID"] == 1794467 and moth["taxon"]["taxonIDSource"] == "gbif-backbone"
+    assert moth["taxon"]["genus"] == "Noctua" and moth["taxon"]["species"] == "pronuba"
+    assert moth["species_list"].startswith("SpeciesList_") and moth["machine_identified_at"].startswith("2026-06-10")
+    same = [b for b in bot if b["patch_id"] == moth["patch_id"]]
+    assert {b["classifier_id"] for b in same} == {"regional-species-model", "global_hierarchical_classifier", "order-model"}
+    glob = [b for b in same if b["classifier_id"] == "global_hierarchical_classifier"][0]
+    assert glob["taxon"]["taxonID"] == 1987000 and glob["classified_at"] is None
+    fly = [b for b in bot if b["taxon"].get("scientificName") == "Diptera"]
+    assert fly and fly[0]["classified_at"] == 1 and fly[0]["taxon"]["taxonRank"] == "order"
+    assert mothbot.check(pkg) == []
+
+
+def test_mothbot_reads_16_bit_and_png_photos(tmp_path):
+    pytest.importorskip("PIL")
+    from PIL import Image
+    from ceh_biomonitoring.validation.platforms import mothbot
+    rows = image_rows()
+    rows = rows[rows.deployment_id == "dep2"].assign(image_path=["c.png", "d.tif"])
+    Image.fromarray((np.arange(100 * 200).reshape(100, 200) % 65535).astype(np.uint16)).save(tmp_path / "c.png")
+    Image.new("RGBA", (200, 100), (10, 200, 10, 128)).save(tmp_path / "d.tif")
+    rows = rows.assign(image_path=[str(tmp_path / p) for p in rows["image_path"]])
+    sel = S.site_lists(U.image_units(rows), "images", per_species=1, noise=0)
+    res = mothbot.prepare(sel, tmp_path / "pk", cluster=False, keep_unzipped=True, round_date="2026-11-18",
+                          species_list="none")
+    assert res["packages"][0]["crops"] == 2 and res["packages"][0]["failures"] == 0

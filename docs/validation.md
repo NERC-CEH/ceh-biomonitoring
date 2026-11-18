@@ -92,13 +92,20 @@ to_experts/singapore/dep000145/2026-11-18_model_provenance.csv   every crop back
 |---|---|
 | **Crops** | cut from the original photos with the detector's boxes (nothing is re-detected). Only the photos needed are fetched, one at a time, and not kept |
 | **Nights** | noon to noon, named by the evening they start. The folder date is the labelling round, not when photos were taken |
-| **Blind** | the model's identifications are left out, so experts label without them. `--no-blind` adds them (`03_classifications/_bot.ndjson`) |
+| **Species list** | every package has one (`species/SpeciesList_<country>_Lepidoptera-GBIF-backbone-<date>.csv`), which Mothbot offers the expert names from. It's on the **GBIF Backbone Taxonomy** (the keys the models' `gbif_id` columns use) and laid out like a GBIF species-list download: the species GBIF has records of in the package's country (Lepidoptera; `--species-taxon Insecta` for more), with their record counts, plus every species the regional model named in the package (and, with `--no-blind`, the global model's guesses too), so a right answer is always on the list. `--species-list <csv>` uses your own list instead (a GBIF download, or any CSV with a species column; it's matched to the backbone), `--no-species-list` leaves it out. What GBIF sends is cached in your model cache, so compute nodes without internet use it; `--slurm` fetches it before the job is sent, and `cehbio update` refreshes it. Species GBIF doesn't know stay on the list by name, and `<package>_species_list.json` (not sent) says where every part came from |
+| **Blind** | the models' identifications are left out, so experts label without them (the default). `--no-blind` (or `--show-machine-ids`) adds them in Mothbot's machine-ID format (`03_classifications/_bot.ndjson`): one row per model per crop (the regional species model, the global model with its GBIF key, and the order model), each with the full taxon and its GBIF backbone key, the species list it belongs to, and when the model ran. The regional model's answer (the order model's, for non-moths) is the one shown first; the expert can switch between models, and their own answers always win |
+| **Times** | from the results (any layout: text, timestamps, time zones, numbers), else the photo's file name, else its EXIF. The results win when both are known, because they hold clock corrections (dep000145 had a camera set to 2023; dep000142 was 10 h out). Sampling says how many times were corrected or missing |
+| **Photos** | JPEG, PNG, TIFF, WebP and BMP (HEIC with `pip install pillow-heif`); 16-bit and transparent photos are converted. Files that can't be trap photos (Windows Recycle Bin copies, `$R...jpg`, and broken rows) are left out at sampling, with a note |
 | **Clusters** | similar crops are grouped ([DINOv2](https://github.com/facebookresearch/dinov2) embeddings and HDBSCAN), so an expert can label a cluster at once. `--cluster-method leaf` (default) gives many small, tight clusters; `eom` fewer, larger ones; `--no-cluster` skips it. DINOv2 is downloaded once into your model cache, so run one `prepare` on a machine with internet before using compute nodes without it |
 | **Screens** | crops that look like a reference set (geckos, leaves, snails...) are left out and **replaced from the reserve**, so targets are still met: sample with `--reserve N`, then `prepare --screen gecko.npz` (or list screens in the `validation.screens` setting). Make a screen from a folder of example crops: `cehbio validate reference crops/geckos --name gecko --out gecko.npz` (threshold: the distance that takes in 95% of the examples, unless you give `--threshold`) |
-| **Checked** | every package is checked before zipping: every crop present, records consistent, boxes inside their photos. `cehbio validate check <folders>` checks any package |
+| **Checked** | every package is checked before zipping: every crop present, records consistent, boxes inside their photos, every machine ID named, the species list readable. `cehbio validate check <folders>` checks any package |
 | **Resumable** | run the same command again after a stop: finished packages are skipped |
 
 Older image results (the INSPIRE / AMBER outputs, with names like `top_species_prediction`) work too, and crop ids match the earlier labelling pipeline's, so crops chosen in earlier Mothbot rounds can be excluded. `--min-crop-area` and `--max-crop-area` leave out crops by size; `--for all` packages every crop.
+
+### Keeping up with Mothbot
+
+Packages follow [Mothbot Classify](https://github.com/Digital-Naturalism-Laboratories/mothbot-classify) (the labelling site) and [Mothbot Process](https://github.com/Digital-Naturalism-Laboratories/Mothbot_Process)'s machine-ID fields as they were when the format was last checked (`MOTHBOT` in `platforms/mothbot.py`; `cehbio versions` shows it). `cehbio update` asks GitHub for the newest of both and says when either has changed, so the format can be checked against the new version (their `docs/mothbox-next-package.md` and `src/features/mothbox-next/records.ts`), and the dates in `MOTHBOT` moved on.
 
 ## Reading the answers back
 
@@ -107,7 +114,7 @@ cehbio validate collect sel/sg_sites.csv returned/*.zip --out answers/sg_sites.c
 cehbio validate collect sel/wood-1.csv to_expert/wood-1/validation_sheet.csv --out answers/wood-1.csv
 ```
 
-One row per answer: the model's species and score, the expert's label (latest answer per expert), and `agrees` (both name the same species), ready for accuracy and thresholds.
+One row per answer: the model's species and score, the expert's label (latest answer per expert) with its GBIF key and the species list they used, and `agrees` (both name the same species), ready for accuracy and thresholds.
 
 ## Adding a platform
 
@@ -120,5 +127,7 @@ src/ceh_biomonitoring/validation/
     media.py      finding recordings and photos: disk, or the object store
     platforms/    audio_clips.py  mothbot.py
     embeddings.py DINOv2: clusters and screens
+    gbif.py       species lists on the GBIF backbone (cached)
+src/ceh_biomonitoring/times.py   dates and times in any layout, from results, file names and EXIF
     collect.py    reading answers back
 ```

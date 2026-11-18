@@ -42,6 +42,9 @@ def _mothbot_answers(paths: list[Path]) -> pd.DataFrame:
                     t = c.get("taxon") or {}
                     rows.append({"detection_id": c.get("patch_id"), "expert": c.get("classifier_id"),
                                  "expert_label": c.get("label"), "expert_rank": t.get("taxonRank"),
+                                 "expert_scientific_name": t.get("scientificName"),
+                                 "expert_taxon_key": t.get("taxonID"), "expert_taxon_keys_from": t.get("taxonIDSource"),
+                                 "expert_species_list": c.get("species_list"),
                                  "expert_order": t.get("order"), "morphospecies": c.get("morphospecies"),
                                  "marked_error": c.get("is_error"), "classified_at": c.get("classified_at"),
                                  "package": p.name})

@@ -5,7 +5,9 @@ update
      such as the UKCEH in-house package)
   2. upgrades the packages of every installed pipeline to their newest releases: BirdNET, Perch's
      runtime, BatDetect2, flat-bug and the image libraries
-  3. fetches the newest Perch model and the newest image models now, so the next run doesn't wait
+  3. fetches the newest Perch model and the newest image models now, so the next run doesn't wait;
+     refreshes the GBIF backbone species lists used in labelling packages, and says whether Mothbot
+     (the labelling site) has changed since the package format was last checked against it
   4. shows what changed
 Every run still records the exact versions it used, so results stay reproducible.
 """
@@ -103,6 +105,9 @@ def update(pull: bool = True, fetch_models: bool = True) -> None:
             print("Fetching the newest image models ...")
             _run([sys.executable, "-c", "from ceh_biomonitoring.update import fetch_image_models; fetch_image_models()"],
                  env=env)
+        print("Refreshing the GBIF backbone species lists used for labelling ...")
+        _run([sys.executable, "-c", "from ceh_biomonitoring.update import refresh_labelling; refresh_labelling()"],
+             env=env)
 
     # 4. what changed
     after = _fresh_versions() or versions()
@@ -125,6 +130,16 @@ def fetch_image_models() -> None:
     print("  Species models are fetched the first time each region is used.")
 
 
+def refresh_labelling() -> None:
+    """Labelling (cehbio validate): newer GBIF species lists, and whether Mothbot has changed."""
+    from .settings import Settings
+    from .validation import gbif
+    from .validation.platforms.mothbot import mothbot_status
+    gbif.refresh(Settings.load())
+    for line in mothbot_status():
+        print("  " + line)
+
+
 def show_versions() -> None:
     v = versions()
     print("Packages:")
@@ -138,6 +153,12 @@ def show_versions() -> None:
         for stage in ("detector", "binary", "order"):
             n = latest(stage, models=ml)
             print(f"  {stage:9s} {n:32s} released {ml['models'][n].get('released', '?')}")
+    except Exception:  # noqa: BLE001
+        pass
+    try:
+        from .validation.platforms.mothbot import MOTHBOT
+        print(f"\nMothbot packages ({MOTHBOT['format']}): checked against Mothbot Classify of "
+              f"{MOTHBOT['classify']['checked']} and Mothbot Process {MOTHBOT['process']['checked']}")
     except Exception:  # noqa: BLE001
         pass
     print("\nEach run records the exact versions it used in its chunks/*_summary.json.")

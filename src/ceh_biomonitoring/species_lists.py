@@ -17,7 +17,6 @@ works.
 """
 from __future__ import annotations
 
-import re
 from datetime import datetime
 from pathlib import Path
 
@@ -106,7 +105,6 @@ def read(path: str | Path) -> set[str]:
     return SpeciesList(path).everything
 
 
-_DATE = re.compile(r"(?<!\d)(20\d{2})[-_]?(0[1-9]|1[0-2])[-_]?(0[1-9]|[12]\d|3[01])(?!\d)")
 
 
 def file_date(key: str, chunk: dict | None = None) -> datetime | None:
@@ -119,13 +117,12 @@ def file_date(key: str, chunk: dict | None = None) -> datetime | None:
         dt = devices.parse_filename(str(key), dev, chunk.get("timestamp_pattern"))["file_datetime"]
         if dt:
             return datetime.strptime(dt, "%Y-%m-%d %H:%M:%S")
-    m = _DATE.search(Path(str(key)).name)
-    if m:
-        try:
-            return datetime(int(m.group(1)), int(m.group(2)), int(m.group(3)))
-        except ValueError:
-            return None
-    return None
+    from . import times                         # the date (and time, if there is one) in any known layout
+    dt = times.from_name(str(key))
+    if dt:
+        return dt
+    d = times.date_from_name(str(key))
+    return datetime(d.year, d.month, d.day) if d else None
 
 
 def file_month(key: str, chunk: dict | None = None) -> int | None:
