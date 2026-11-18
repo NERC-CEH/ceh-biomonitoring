@@ -20,9 +20,10 @@ How picks are spread, so the expert sees a fair picture rather than the easiest 
                across the survey (different days, nights, weeks and months, where the data allow)
   'best'       (site-lists for birds and bats) the best-scoring unit, then the best on another day, then
                another recording: the clearest examples, for a quick "is it there?" check
-Both purposes add species detected in a month their species list marks UNLIKELY (an early Swallow is a
+Site-lists add species detected in a month their species list marks UNLIKELY (an early Swallow is a
 real record if it's right, so it's checked, not removed). Images site-lists add some non-moth insects
-("noise", in proportion to their orders), so the expert sees what the moth filter let through.
+("noise", in proportion to their orders, drawn at random with --seed), so the expert sees what the moth
+filter removed. The full method, step by step: docs/sampling-methods.md.
 
 --reserve N adds N spare units per species (and site) after the picks. They're used only when a
 platform drops a pick, for example the Mothbot package's screens (geckos, leaves...), so the targets

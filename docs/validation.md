@@ -42,16 +42,16 @@ The same results can be sampled for different jobs. Give earlier selections with
 
 **Unusual months:** species detected in a month their [species list](birds.md) marks *unlikely* are always added to site-lists (an early Swallow is a real record if it's right, so it's checked, not removed). `--no-unusual-months` leaves them out.
 
-**Noise (images):** site-lists also include up to 100 insects per deployment that aren't moths (`--noise`), in proportion to their orders, so the expert sees what the moth filter let through.
+**Noise (images):** site-lists also include up to 100 insects per deployment that the moth filter removed (`--noise`), in proportion to their orders and drawn at random (`--seed`), so the expert sees what it removed.
 
 ## How picks are spread
 
-So that experts see a fair picture, not just the easiest or busiest cases:
+So that experts see a fair picture, not just the easiest or busiest cases (the full method, step by step, with what each sample can estimate: [Sampling methods](sampling-methods.md)):
 
 | | |
 |---|---|
 | **Space** | model: one per site first (busiest sites first), the rest in proportion to what each site has |
-| **Confidence** | units are split into equal score bands, low to high, and one is taken from each |
+| **Confidence** | units are split into bands with equal numbers of units, low to high score, and one is taken from each |
 | **Time** | from each band, the unit **furthest in time from those already picked**, so picks reach across the survey (different days, nights, weeks and months, where the data allow) |
 | **"best"** | site-lists for birds and bats (`--how best`): the best-scoring unit, then the best on another day, then in another recording. The clearest examples, for a quick "is it there?" check. Images use `--how spread` |
 
@@ -93,7 +93,7 @@ to_experts/singapore/dep000145/2026-11-18_model_provenance.csv   every crop back
 | **Crops** | cut from the original photos with the detector's boxes (nothing is re-detected). Only the photos needed are fetched, one at a time, and not kept |
 | **Nights** | noon to noon, named by the evening they start. The folder date is the labelling round, not when photos were taken |
 | **Species list** | every package has one (`species/SpeciesList_<country>_Lepidoptera-GBIF-backbone-<date>.csv`), which Mothbot offers the expert names from. It's on the **GBIF Backbone Taxonomy** (the keys the models' `gbif_id` columns use) and laid out like a GBIF species-list download: the species GBIF has records of in the package's country (Lepidoptera; `--species-taxon Insecta` for more), with their record counts, plus every species the regional model named in the package (and, with `--no-blind`, the global model's guesses too), so a right answer is always on the list. `--species-list <csv>` uses your own list instead (a GBIF download, or any CSV with a species column; it's matched to the backbone), `--no-species-list` leaves it out. What GBIF sends is cached in your model cache, so compute nodes without internet use it; `--slurm` fetches it before the job is sent, and `cehbio update` refreshes it. Species GBIF doesn't know stay on the list by name, and `<package>_species_list.json` (not sent) says where every part came from |
-| **Blind** | the models' identifications are left out, so experts label without them (the default). `--no-blind` (or `--show-machine-ids`) adds them in Mothbot's machine-ID format (`03_classifications/_bot.ndjson`): one row per model per crop (the regional species model, the global model with its GBIF key, and the order model), each with the full taxon and its GBIF backbone key, the species list it belongs to, and when the model ran. The regional model's answer (the order model's, for non-moths) is the one shown first; the expert can switch between models, and their own answers always win |
+| **Blind** | the models' identifications are left out, so experts label without them (the default). `--no-blind` (or `--show-machine-ids`) adds them in Mothbot's machine-ID format (`03_classifications/_bot.ndjson`): one row per model per crop (the regional species model, the global model with its GBIF key, and the order model: always **our** models' identifications, read from the results and named by model, e.g. `moth-species-singapore-v2`; Mothbot's own classifier, BioCLIP in Mothbot Process, is never run, and Mothbot Classify only displays what's in the package), each with the full taxon and its GBIF backbone key, the species list it belongs to, and when the model ran. The regional model's answer (the order model's, for non-moths) is the one shown first; the expert can switch between models, and their own answers always win |
 | **Times** | from the results (any layout: text, timestamps, time zones, numbers), else the photo's file name, else its EXIF. The results win when both are known, because they hold clock corrections (dep000145 had a camera set to 2023; dep000142 was 10 h out). Sampling says how many times were corrected or missing |
 | **Photos** | JPEG, PNG, TIFF, WebP and BMP (HEIC with `pip install pillow-heif`); 16-bit and transparent photos are converted. Files that can't be trap photos (Windows Recycle Bin copies, `$R...jpg`, and broken rows) are left out at sampling, with a note |
 | **Clusters** | similar crops are grouped ([DINOv2](https://github.com/facebookresearch/dinov2) embeddings and HDBSCAN), so an expert can label a cluster at once. `--cluster-method leaf` (default) gives many small, tight clusters; `eom` fewer, larger ones; `--no-cluster` skips it. DINOv2 is downloaded once into your model cache, so run one `prepare` on a machine with internet before using compute nodes without it |

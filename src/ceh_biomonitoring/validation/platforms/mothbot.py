@@ -151,8 +151,10 @@ def model_names(settings, rows: pd.DataFrame) -> dict:
         try:
             from ... import countries
             t = countries.load(settings)
-            folder = rows["country_folder"].dropna().astype(str) if "country_folder" in rows.columns else pd.Series([], dtype=str)
-            hit = t[t["country_folder"].astype(str).isin(set(folder))] if len(folder) else t.iloc[0:0]
+            said = {str(v).lower() for c in ("country", "country_folder", "bucket", "bucket_name") if c in rows.columns
+                    for v in rows[c].dropna().unique() if _has(v)}
+            keys = [c for c in ("country_name", "country_folder", "bucket_code") if c in t.columns]
+            hit = t[t[keys].astype(str).apply(lambda col: col.str.lower()).isin(said).any(axis=1)] if said else t.iloc[0:0]
             if len(hit) and "species_model" in hit.columns:
                 regional = str(hit["species_model"].iloc[0])
         except (Exception, SystemExit):  # noqa: BLE001 - no country table: a generic name

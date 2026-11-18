@@ -12,7 +12,7 @@ Tools from the UK Centre for Ecology & Hydrology (UKCEH) for biodiversity monito
 | Birds in audible recordings | **BirdNET** or **Perch** (your choice) | `cehbio run birds` | [Birds](docs/birds.md) |
 | Bats in ultrasonic recordings | **BatDetect2** | `cehbio run bats` | [Bats](docs/bats.md) |
 | Moths and other insects in light-trap images | insect detection, moth/non-moth, order and regional species models for AMI traps and LepiSense | `cehbio run images` | [Images](docs/images.md) |
-| Expert checks of the results (birds, bats, images) | fair samples for experts, packaged as audio clips or for the [Mothbot](https://mothbot-classify.vercel.app) labelling site, and their answers read back | `cehbio validate` | [Manual validation](docs/validation.md) |
+| Expert checks of the results (birds, bats, images) | fair samples for experts, packaged as audio clips or for the [Mothbot](https://mothbot-classify.vercel.app) labelling site, and their answers read back | `cehbio validate` | [Manual validation](docs/validation.md), [Sampling methods](docs/sampling-methods.md) |
 
 You only install what you need. Everything shares one environment, called `ceh-biomonitoring`.
 
