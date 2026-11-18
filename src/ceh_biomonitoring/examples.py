@@ -37,6 +37,10 @@ def get(pipeline: str, settings) -> Path:
         raise SystemExit(f"No examples for '{pipeline}'. There are: {', '.join(m)}")
     dest = settings.outputs_root / "examples" / pipeline / "data"
     dest.mkdir(parents=True, exist_ok=True)
+    listed = {f["name"] for f in m[pipeline]["files"]}
+    for old in dest.iterdir():                 # files from an earlier version of the examples
+        if old.is_file() and old.name not in listed:
+            old.unlink()
     for f in m[pipeline]["files"]:
         target = dest / f["name"]
         if target.exists() and _sha(target) == f["sha256"]:
@@ -71,6 +75,14 @@ def check(pipeline: str, det, expect: dict) -> tuple[bool, str]:
     return True, msg
 
 
+def fingerprint(pipeline: str, extra: list[str] = ()) -> str:
+    """Short id of the example files and run options: when they change, the example runs afresh
+    instead of reusing results from the old files."""
+    m = manifest()[pipeline]
+    text = "|".join(sorted(f["sha256"] for f in m["files"])) + "|" + " ".join([*m.get("run", []), *extra])
+    return hashlib.sha256(text.encode()).hexdigest()[:8]
+
+
 def run(pipeline: str, settings, extra: list[str]) -> bool:
     import pandas as pd
     from . import pipelines, runner
@@ -82,7 +94,7 @@ def run(pipeline: str, settings, extra: list[str]) -> bool:
         print(f"{pipeline}: not installed here, skipped ({e})")
         return True
     folder = get(pipeline, settings)
-    dep = f"example-{pipeline}"
+    dep = f"example-{pipeline}-{fingerprint(pipeline, extra)}"
     print(f"\n=== {pipeline}: {manifest()[pipeline]['about']}\n    files: {folder}", flush=True)
     main(["run", pipeline, "--folder", str(folder), "--deployment", dep, "--here",
           *manifest()[pipeline].get("run", []), *extra])

@@ -292,3 +292,11 @@ def test_example_check():
     assert check("birds", det, {"min_detections": 1, "any_species": ["Erithacus rubecula"]})[0]
     assert not check("birds", det, {"any_species": ["Turdus merula"]})[0]
     assert not check("bats", det.iloc[:0], {"min_detections": 1})[0]
+
+
+def test_example_fingerprint_changes_with_files_and_options():
+    from ceh_biomonitoring import examples
+    a = examples.fingerprint("birds")
+    assert a == examples.fingerprint("birds") and len(a) == 8
+    assert a != examples.fingerprint("birds", ["--set", "model=perch"])
+    assert a != examples.fingerprint("bats")

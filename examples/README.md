@@ -8,7 +8,7 @@ cehbio examples run birds       # run one pipeline on its examples and check the
 cehbio examples run all         # every pipeline you have installed
 ```
 
-Each run says **PASS** (with what it found) or **PROBLEM**. The results go in your outputs folder under `example-<pipeline>`. The examples check that the pipeline runs; they're far too small to judge how accurate it is.
+Each run says **PASS** (with what it found) or **PROBLEM**. The results go in your outputs folder under `example-<pipeline>-<id>`, where the id changes whenever the example files or options do (so a changed example always runs afresh). The examples check that the pipeline runs; they're far too small to judge how accurate it is.
 
 Every file is checked against its fingerprint (sha256) before use. The list, with sources, is in [`src/ceh_biomonitoring/examples.yml`](../src/ceh_biomonitoring/examples.yml).
 
