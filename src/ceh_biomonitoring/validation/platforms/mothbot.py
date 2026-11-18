@@ -39,6 +39,7 @@ a finished package isn't rebuilt when the command is run again.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import zipfile
 from datetime import date, datetime, timezone
@@ -103,6 +104,23 @@ def read_ndjson(path: Path) -> list[dict]:
 def _night(t) -> str:
     t = pd.to_datetime(t, errors="coerce")
     return "unknown" if pd.isna(t) else (t - pd.Timedelta(hours=12)).date().isoformat()
+
+
+ISO_TIME = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?$")
+ISO_DATE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def iso_time(t, clock_timezone: str | None = None) -> str | None:
+    """A photo time as strict ISO 8601 (2026-06-12T23:00:55, plus +00:00 when the clock's zone is known).
+    Mothbot reads anything else with the browser's date parser, which takes 06/12/2026 as 12 June
+    (US order) and shifts times by the laptop's own time zone."""
+    if t is None or pd.isna(t):
+        return None
+    s = pd.Timestamp(t).strftime("%Y-%m-%dT%H:%M:%S")
+    if clock_timezone:
+        z = str(clock_timezone).strip().upper()
+        s += "+00:00" if z in ("UTC", "GMT", "Z", "+00:00") else z
+    return s
 
 
 def _has(v) -> bool:
@@ -217,7 +235,7 @@ def machine_ids(r: dict, bb, models: dict, species_list: str | None) -> list[dic
 # ------------------------------------------------------------------ building one package
 def build(rows: pd.DataFrame, pkg: Path, dataset_id: str, title: str, settings, blind: bool,
           media: Media, screens: list[dict], do_cluster: bool, cluster_opts: dict,
-          species: dict | None = None, bb=None) -> dict:
+          species: dict | None = None, bb=None, clock_timezone: str | None = None) -> dict:
     """species: {"table": the species list, "name": its file name, "about": where it came from}.
     bb: GBIF backbone look-ups (for the machine identifications)."""
     from .. import embeddings as E
@@ -310,7 +328,7 @@ def build(rows: pd.DataFrame, pkg: Path, dataset_id: str, title: str, settings, 
         pid = r["detection_id"]
         rec = {"patch_id": pid, "dataset_id": dataset_id, "asset_path": f"01_patches/{pid}.jpg",
                "media_type": "image/jpeg",
-               "captured_at": None if pd.isna(r["captured_at"]) else r["captured_at"].isoformat(),
+               "captured_at": iso_time(r["captured_at"], clock_timezone),
                "deployment_id": str(r["deployment_id"]), "camera_day_id": r["camera_day_id"]}
         if not pd.isna(r["cluster_id"]):
             rec.update(cluster_id=float(r["cluster_id"]), clustered_at=now)
@@ -435,6 +453,15 @@ def check(pkg: Path) -> list[str]:
         if min(xs) < 0 or min(ys) < 0 or max(xs) > s["source_photo_width"] or max(ys) > s["source_photo_height"]:
             out.append(f"box outside its photo: {s['patch_id']}")
             break
+    bad = [p["captured_at"] for p in rec["patches"] if p.get("captured_at") and not ISO_TIME.match(str(p["captured_at"]))]
+    if bad:
+        out.append(f"{len(bad)} photo times aren't strict ISO 8601 (Mothbot would misread them), e.g. {bad[0]}")
+    bad = [c.get("night_date") for c in rec["camera_days"] if c.get("night_date") not in (None, "unknown")
+           and not ISO_DATE.match(str(c["night_date"]))]
+    bad += [d.get("deployment_start_from_folder") for d in rec["deployments"] if d.get("deployment_start_from_folder")
+            and not ISO_DATE.match(str(d["deployment_start_from_folder"]))]
+    if bad:
+        out.append(f"{len(bad)} dates aren't YYYY-MM-DD (Mothbot would misread them), e.g. {bad[0]}")
     days = {c["camera_day_id"]: c for c in rec["camera_days"]}
     if {p["camera_day_id"] for p in rec["patches"]} - set(days):
         out.append("some patches' nights are missing from camera-days")
@@ -513,7 +540,8 @@ def prepare(sel: pd.DataFrame, out: Path, settings=None, blind: bool | None = No
             source_root: str | None = None, screens: list | None = None, cluster: bool = True,
             cluster_method: str = "leaf", min_cluster_size: int = 3, one_package: bool = False,
             keep_unzipped: bool = False, round_date: str | None = None, species_list: str | None = None,
-            species_taxon: str = "Lepidoptera", offline: bool = False, **_) -> dict:
+            species_taxon: str = "Lepidoptera", offline: bool = False, clock_timezone: str | None = None,
+            **_) -> dict:
     """species_list: None (built from GBIF for the package's country), a CSV of your own, or "none"."""
     from .. import embeddings as E
     from .. import gbif
@@ -546,7 +574,8 @@ def prepare(sel: pd.DataFrame, out: Path, settings=None, blind: bool | None = No
                 print(f"   species list: {a['rows']} taxa ({a['with_keys']} with GBIF backbone keys) -> "
                       f"species/{species['name']}", flush=True)
             res = build(rows, pkg, dataset_id, title, settings, blind, media, loaded, cluster,
-                        {"method": cluster_method, "min_cluster_size": min_cluster_size}, species, bb)
+                        {"method": cluster_method, "min_cluster_size": min_cluster_size}, species, bb,
+                        clock_timezone)
             if "skipped" not in res:
                 res["zip"] = str(zip_package(pkg, keep_unzipped))
             print("   " + ", ".join(f"{k}: {v}" for k, v in res.items()), flush=True)

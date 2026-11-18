@@ -156,6 +156,8 @@ def add_command(sub, common) -> None:
     q.add_argument("--no-species-list", action="store_true", help="mothbot: don't add a species list")
     q.add_argument("--species-taxon", default="Lepidoptera",
                    help="mothbot: the group the country list covers (default Lepidoptera; e.g. Insecta)")
+    q.add_argument("--clock-timezone", help="mothbot: the zone the camera clocks keep, e.g. UTC or +01:00, written with "
+                                            "each photo time (LepiSense units keep UTC). Times aren't shifted")
     q.add_argument("--offline", action="store_true",
                    help="mothbot: don't ask GBIF, use only what's cached (compute nodes without internet)")
     q.add_argument("--clip-seconds", type=float, help="audio-clips: clip length (birds 30; bats: the pass)")
@@ -192,7 +194,7 @@ def add_command(sub, common) -> None:
                           cluster_method=a.cluster_method, min_cluster_size=a.min_cluster_size,
                           one_package=a.one_package, keep_unzipped=a.keep_unzipped,
                           species_list="none" if a.no_species_list else a.species_list,
-                          species_taxon=a.species_taxon, offline=a.offline)
+                          species_taxon=a.species_taxon, offline=a.offline, clock_timezone=a.clock_timezone)
         print(f"\nDone: {res}")
         print(f"When the experts are finished: cehbio validate collect {a.selection} {a.out} --out <answers.csv>")
     q.set_defaults(func=run_prepare)

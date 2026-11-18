@@ -380,6 +380,22 @@ def test_mothbot_machine_ids_follow_mothbots_format_when_shown(tmp_path):
     assert mothbot.check(pkg) == []
 
 
+def test_mothbot_times_are_strict_iso_and_bad_dates_are_caught(tmp_path):
+    pytest.importorskip("PIL")
+    from ceh_biomonitoring.validation.platforms import mothbot
+    assert mothbot.iso_time(pd.Timestamp("2026-06-12 23:00:55")) == "2026-06-12T23:00:55"
+    assert mothbot.iso_time(pd.Timestamp("2026-06-12 23:00:55"), "UTC") == "2026-06-12T23:00:55+00:00"
+    sel = S.site_lists(U.image_units(photos(tmp_path, image_rows())), "images", per_species=1, noise=0)
+    mothbot.prepare(sel, tmp_path / "pk", cluster=False, keep_unzipped=True, round_date="2026-11-18",
+                    species_list="none", clock_timezone="UTC")
+    pkg = tmp_path / "pk" / "dep1" / "2026-11-18_site-lists"
+    recs = mothbot.read_ndjson(pkg / "02_records" / "patches.ndjson")
+    assert all(p["captured_at"].endswith("+00:00") for p in recs) and mothbot.check(pkg) == []
+    recs[0]["captured_at"] = "06/12/2026 23:00:55"                      # what Mothbot misread before
+    (pkg / "02_records" / "patches.ndjson").write_text("\n".join(json.dumps(p) for p in recs))
+    assert any("ISO 8601" in p for p in mothbot.check(pkg))
+
+
 def test_mothbot_reads_16_bit_and_png_photos(tmp_path):
     pytest.importorskip("PIL")
     from PIL import Image
