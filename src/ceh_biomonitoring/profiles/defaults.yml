@@ -23,6 +23,11 @@ models:
   cache_dir: ~/.cache/ceh-biomonitoring/models   # downloaded model files are kept here
   search_dirs: []           # folders that already hold model files (searched by file name first)
 
+validation:
+  screens: []               # things to leave out of Mothbot packages, e.g.
+                            #   - {name: gecko, file: /path/to/gecko_reference.npz, threshold: 35.66}
+  torch_hub_dir: ""         # where DINOv2 is kept; empty = <models.cache_dir>/torch_hub
+
 pipeline_defaults: {}       # e.g. images: {box_threshold: 0.2}: defaults for a team or machine
 
 slurm:

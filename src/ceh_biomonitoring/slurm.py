@@ -63,3 +63,40 @@ def submit(script: Path) -> str:
     if res.returncode != 0:
         raise SystemExit(f"sbatch failed: {res.stderr.strip()}")
     return res.stdout.strip().split(";")[0]
+
+
+COMMAND_TEMPLATE = """#!/bin/bash
+#SBATCH --job-name={job_name}
+{sbatch_lines}
+#SBATCH --output={log_dir}/%x_%j.out
+set -euo pipefail
+echo "[$(date -Is)] {job_name} on $(hostname)"
+{env_lines}{python} -m ceh_biomonitoring {args} --profile {profile}
+"""
+
+
+def write_command_job(settings: Settings, job_name: str, argv: list[str], job_dir: Path,
+                      use_gpu: bool = False) -> Path:
+    """A one-task job that runs `cehbio <argv>` with this machine's Slurm settings (any cluster)."""
+    s = settings.get("slurm") or {}
+    g = s.get("gpu") or {}
+    if use_gpu and not g.get("partition"):
+        print("No GPU partition set for this machine: the job runs on CPU (slower).", flush=True)
+        use_gpu = False
+    opts = {
+        "account": (g.get("account") if use_gpu else None) or s.get("account"),
+        "partition": g.get("partition") if use_gpu else s.get("partition"),
+        "qos": (g.get("qos") if use_gpu else None) or s.get("qos"),
+        "time": s.get("time"), "mem": s.get("mem"), "cpus-per-task": s.get("cpus"),
+        "gres": g.get("gres") if use_gpu else None,
+    }
+    job_dir.mkdir(parents=True, exist_ok=True)
+    (job_dir / "logs").mkdir(exist_ok=True)
+    script = COMMAND_TEMPLATE.format(
+        job_name=job_name, sbatch_lines="\n".join(f"#SBATCH --{k}={v}" for k, v in opts.items() if v not in (None, "")),
+        log_dir=job_dir / "logs", python=shlex.quote(sys.executable), profile=settings.profile,
+        env_lines="".join(f"export {k}={shlex.quote(str(v))}\n" for k, v in (s.get("env") or {}).items()),
+        args=" ".join(shlex.quote(a) for a in argv))
+    path = job_dir / f"{job_name}.sbatch"
+    path.write_text(script)
+    return path

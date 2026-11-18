@@ -351,6 +351,9 @@ def build_parser() -> argparse.ArgumentParser:
     from .examples import add_command as _add_examples
     _add_examples(sub, common)
 
+    from .validation import add_command as _add_validate
+    _add_validate(sub, common)
+
     sub.add_parser("status", parents=[common, dep], help="progress of a deployment").set_defaults(func=cmd_status)
     sub.add_parser("combine", parents=[common, dep], help="merge chunk outputs + QA").set_defaults(func=cmd_combine)
 
