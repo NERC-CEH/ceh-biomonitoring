@@ -34,19 +34,23 @@ Three short full-spectrum (256 kHz) recordings of UK bats: Common Pipistrelle, D
 
 ## Images
 
-Five consecutive photos from an automated moth trap (28 July 2022), for detection, classification and tracking. Downloaded from the AMI Data Companion's test images when first used; not copied into this repository.
+Five consecutive photos, 10 seconds apart, from a UKCEH automated moth trap at "Prickly pear" on **Anguilla** (AMBER project), 4 January 2025 from 03:12 local time. Each has about 25 moths, many of them seen in all five, so the run shows detection, identification with the **Anguilla species model** (`region=anguilla`) and tracking.
 
-| File | Species | Recorded by | Licence | Source |
-|---|---|---|---|---|
-| `20220728232239-00-69.jpg` |  | Rolnick Lab, Mila: AMI Data Companion test images | AGPL-3.0 (the AMI Data Companion repository) | [source](https://github.com/RolnickLab/ami-data-companion/tree/main/trapdata/tests/images/sequential) |
-| `20220728232322-00-70.jpg` |  | Rolnick Lab, Mila: AMI Data Companion test images | AGPL-3.0 (the AMI Data Companion repository) | [source](https://github.com/RolnickLab/ami-data-companion/tree/main/trapdata/tests/images/sequential) |
-| `20220728232445-00-71.jpg` |  | Rolnick Lab, Mila: AMI Data Companion test images | AGPL-3.0 (the AMI Data Companion repository) | [source](https://github.com/RolnickLab/ami-data-companion/tree/main/trapdata/tests/images/sequential) |
-| `20220728232552-00-72.jpg` |  | Rolnick Lab, Mila: AMI Data Companion test images | AGPL-3.0 (the AMI Data Companion repository) | [source](https://github.com/RolnickLab/ami-data-companion/tree/main/trapdata/tests/images/sequential) |
-| `20220728232652-00-74.jpg` |  | Rolnick Lab, Mila: AMI Data Companion test images | AGPL-3.0 (the AMI Data Companion repository) | [source](https://github.com/RolnickLab/ami-data-companion/tree/main/trapdata/tests/images/sequential) |
+| File | Time (local) |
+|---|---|
+| `20250104031250-snapshot.jpg` | 03:12:50 |
+| `20250104031259-snapshot.jpg` | 03:12:59 |
+| `20250104031310-snapshot.jpg` | 03:13:10 |
+| `20250104031319-snapshot.jpg` | 03:13:19 |
+| `20250104031330-snapshot.jpg` | 03:13:30 |
+
+Recorded by UKCEH for the AMBER project. **CC BY 4.0**: credit UKCEH. Full size (4096 × 2160) and unchanged; their EXIF data holds only the date, time and time-zone offset.
+
+The detector is slow without a GPU: on one CPU core the five photos take about 20 minutes, and a laptop with several cores is quicker. The run prints a line per photo so you can see it working.
 
 ## Licences and changes
 
 - **Birds and bats** are open recordings shared on iNaturalist and published through GBIF, under **CC0** (no conditions) or **CC BY 4.0** (credit the recordist: Andrew Skotnicki for the Wren). Thank you to everyone listed above. The bird recordings are the **first 30 seconds** of the originals; the bat recordings are unchanged. The file names give the recording date (time of day isn't known, so it's set to midday for birds and 22:00 for bats) and the GBIF record number.
-- **Images** belong to the [AMI Data Companion](https://github.com/RolnickLab/ami-data-companion) (Rolnick Lab, Mila), whose repository is licensed AGPL-3.0. They're **not copied into this repository**: `cehbio examples` downloads them from there, at a fixed version, when first used.
+- **Images** are UKCEH's own (AMBER project), released under **CC BY 4.0**: credit UKCEH.
 
-Better UK examples (for instance UKCEH's own trap photos, released under an open licence) can replace these: add the files and their entries to `examples.yml`, and `pytest` checks they match.
+To change an example, add the files and their entries to `examples.yml`; `pytest` checks they match.

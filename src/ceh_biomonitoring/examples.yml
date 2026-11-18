@@ -96,46 +96,68 @@ bats:
     lon: -3.068468
     note: unchanged
 images:
-  about: Five consecutive photos from an automated moth trap (28 July 2022), for detection, classification and tracking. Downloaded
-    from the AMI Data Companion's test images when first used; not copied into this repository.
+  about: Five consecutive photos (10 s apart) from a UKCEH automated moth trap on Anguilla, 4 January 2025 at 03:12 local
+    time, with about 25 moths each, for detection, species identification (Anguilla model) and tracking.
   run:
   - --timestamp-pattern
   - YYYYMMDDhhmmss-*
+  - --set
+  - region=anguilla
   expect:
     min_detections: 1
   files:
-  - name: 20220728232239-00-69.jpg
-    in_repo: false
-    url: https://raw.githubusercontent.com/RolnickLab/ami-data-companion/55d0787570f8c9d92c450f4fb65a58dd25cf6634/trapdata/tests/images/sequential/20220728232239-00-69.jpg
-    sha256: f3ed1daa461089f62a3e5bf614f88af7f68fbf13434725d76fad8e508ec6e261
-    licence: AGPL-3.0 (the AMI Data Companion repository)
-    credit: 'Rolnick Lab, Mila: AMI Data Companion test images'
-    source: https://github.com/RolnickLab/ami-data-companion/tree/main/trapdata/tests/images/sequential
-  - name: 20220728232322-00-70.jpg
-    in_repo: false
-    url: https://raw.githubusercontent.com/RolnickLab/ami-data-companion/55d0787570f8c9d92c450f4fb65a58dd25cf6634/trapdata/tests/images/sequential/20220728232322-00-70.jpg
-    sha256: 55ca3a0a1cb767f9a95ea0c7348a11f884f940c1b66bed2131fd8947509cb5e4
-    licence: AGPL-3.0 (the AMI Data Companion repository)
-    credit: 'Rolnick Lab, Mila: AMI Data Companion test images'
-    source: https://github.com/RolnickLab/ami-data-companion/tree/main/trapdata/tests/images/sequential
-  - name: 20220728232445-00-71.jpg
-    in_repo: false
-    url: https://raw.githubusercontent.com/RolnickLab/ami-data-companion/55d0787570f8c9d92c450f4fb65a58dd25cf6634/trapdata/tests/images/sequential/20220728232445-00-71.jpg
-    sha256: 8d97f85d7ecdef1084a4edc41ab00d572a6d490a4202ff9e0c424fbf4a8c2e52
-    licence: AGPL-3.0 (the AMI Data Companion repository)
-    credit: 'Rolnick Lab, Mila: AMI Data Companion test images'
-    source: https://github.com/RolnickLab/ami-data-companion/tree/main/trapdata/tests/images/sequential
-  - name: 20220728232552-00-72.jpg
-    in_repo: false
-    url: https://raw.githubusercontent.com/RolnickLab/ami-data-companion/55d0787570f8c9d92c450f4fb65a58dd25cf6634/trapdata/tests/images/sequential/20220728232552-00-72.jpg
-    sha256: 87f13ca7018c84c343bddb8c90a3a5b258ca6b4c33ba54e65f526043fdfa331c
-    licence: AGPL-3.0 (the AMI Data Companion repository)
-    credit: 'Rolnick Lab, Mila: AMI Data Companion test images'
-    source: https://github.com/RolnickLab/ami-data-companion/tree/main/trapdata/tests/images/sequential
-  - name: 20220728232652-00-74.jpg
-    in_repo: false
-    url: https://raw.githubusercontent.com/RolnickLab/ami-data-companion/55d0787570f8c9d92c450f4fb65a58dd25cf6634/trapdata/tests/images/sequential/20220728232652-00-74.jpg
-    sha256: a653620a02c4ed682770bdae5ed17edae5e23d3698a02fe2497ded5523e1cf2c
-    licence: AGPL-3.0 (the AMI Data Companion repository)
-    credit: 'Rolnick Lab, Mila: AMI Data Companion test images'
-    source: https://github.com/RolnickLab/ami-data-companion/tree/main/trapdata/tests/images/sequential
+  - name: 20250104031250-snapshot.jpg
+    in_repo: true
+    url: https://raw.githubusercontent.com/NERC-CEH/ceh-biomonitoring/main/examples/images/20250104031250-snapshot.jpg
+    sha256: c65f51393d4dc63b2c6739ce01062eb5fe6c4085710de4e7e382705007b155c4
+    licence: CC BY 4.0
+    credit: UKCEH (AMBER project)
+    source: UKCEH AMBER automated moth trap, Anguilla (deployment dep000099, 'Prickly pear')
+    recorded: '2025-01-04'
+    lat: 18.26
+    lon: -63.17
+    note: unchanged (EXIF holds only the date, time and time-zone offset)
+  - name: 20250104031259-snapshot.jpg
+    in_repo: true
+    url: https://raw.githubusercontent.com/NERC-CEH/ceh-biomonitoring/main/examples/images/20250104031259-snapshot.jpg
+    sha256: 7138a5fd45425f2fe6d88e0863d55c05c95eef9e25b5a420e0015b27d4e90d39
+    licence: CC BY 4.0
+    credit: UKCEH (AMBER project)
+    source: UKCEH AMBER automated moth trap, Anguilla (deployment dep000099, 'Prickly pear')
+    recorded: '2025-01-04'
+    lat: 18.26
+    lon: -63.17
+    note: unchanged (EXIF holds only the date, time and time-zone offset)
+  - name: 20250104031310-snapshot.jpg
+    in_repo: true
+    url: https://raw.githubusercontent.com/NERC-CEH/ceh-biomonitoring/main/examples/images/20250104031310-snapshot.jpg
+    sha256: 9c436c68639e06d73b7f9dcceef90de51eafa143a78631948fe27403756d4f86
+    licence: CC BY 4.0
+    credit: UKCEH (AMBER project)
+    source: UKCEH AMBER automated moth trap, Anguilla (deployment dep000099, 'Prickly pear')
+    recorded: '2025-01-04'
+    lat: 18.26
+    lon: -63.17
+    note: unchanged (EXIF holds only the date, time and time-zone offset)
+  - name: 20250104031319-snapshot.jpg
+    in_repo: true
+    url: https://raw.githubusercontent.com/NERC-CEH/ceh-biomonitoring/main/examples/images/20250104031319-snapshot.jpg
+    sha256: 7eefafb49a7c379d9a5c0d36c3ace4a8f2a0cdebebe0fc18e11ed08c948fb6bd
+    licence: CC BY 4.0
+    credit: UKCEH (AMBER project)
+    source: UKCEH AMBER automated moth trap, Anguilla (deployment dep000099, 'Prickly pear')
+    recorded: '2025-01-04'
+    lat: 18.26
+    lon: -63.17
+    note: unchanged (EXIF holds only the date, time and time-zone offset)
+  - name: 20250104031330-snapshot.jpg
+    in_repo: true
+    url: https://raw.githubusercontent.com/NERC-CEH/ceh-biomonitoring/main/examples/images/20250104031330-snapshot.jpg
+    sha256: 57cf6a50830816eb7dd130d1aace836f10e8330199064199feed2602ffbeb649
+    licence: CC BY 4.0
+    credit: UKCEH (AMBER project)
+    source: UKCEH AMBER automated moth trap, Anguilla (deployment dep000099, 'Prickly pear')
+    recorded: '2025-01-04'
+    lat: 18.26
+    lon: -63.17
+    note: unchanged (EXIF holds only the date, time and time-zone offset)
