@@ -228,3 +228,23 @@ def test_circle_masks_from_masks_json(tmp_path):
 def test_detector_precision_defaults_to_full():
     p = pipelines.get("images")
     assert p.defaults["detector_precision"] == "float32"
+
+
+def test_photos_that_end_early_are_read_and_marked(tmp_path):
+    """SD-card errors leave JPEGs cut short: read what's there instead of setting the photo aside."""
+    from PIL import Image
+    from ceh_biomonitoring.pipelines.images import open_photo
+    whole = tmp_path / "whole.jpg"
+    Image.new("RGB", (400, 300), (200, 50, 50)).save(whole, quality=90)
+    cut = tmp_path / "cut.jpg"
+    cut.write_bytes(whole.read_bytes()[: int(whole.stat().st_size * 0.6)])
+    im, repaired = open_photo(whole)
+    assert im.size == (400, 300) and not repaired
+    im, repaired = open_photo(cut)
+    assert im.size == (400, 300) and repaired
+    junk = tmp_path / "junk.jpg"
+    junk.write_bytes(b"not a photo at all")
+    with pytest.raises(OSError):
+        open_photo(junk)
+    from ceh_biomonitoring.validation.platforms.mothbot import _open_photo
+    assert _open_photo(cut)[0].size == (400, 300)

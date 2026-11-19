@@ -202,6 +202,8 @@ def add_command(sub, common) -> None:
                    help="mothbot: the group the country list covers (default Lepidoptera; e.g. Insecta)")
     q.add_argument("--clock-timezone", help="mothbot: the zone the camera clocks keep, e.g. UTC or +01:00, written with "
                                             "each photo time (LepiSense units keep UTC). Times aren't shifted")
+    q.add_argument("--site-name", help="mothbot: the site name Mothbot shows, e.g. Farm 1 (default: the project "
+                                       "folder of the results, or the country)")
     q.add_argument("--offline", action="store_true",
                    help="mothbot: don't ask GBIF, use only what's cached (compute nodes without internet)")
     q.add_argument("--clip-seconds", type=float, help="audio-clips: clip length (birds 30; bats: the pass)")
@@ -256,7 +258,8 @@ def add_command(sub, common) -> None:
                           cluster_method=a.cluster_method, min_cluster_size=a.min_cluster_size,
                           one_package=a.one_package, keep_unzipped=a.keep_unzipped,
                           species_list="none" if a.no_species_list else a.species_list,
-                          species_taxon=a.species_taxon, offline=a.offline, clock_timezone=a.clock_timezone)
+                          species_taxon=a.species_taxon, offline=a.offline, clock_timezone=a.clock_timezone,
+                          site_name=a.site_name)
         print(f"\nDone: {res}")
         print(f"\nThe packages are in {a.out}")
         if a.project:
@@ -312,10 +315,12 @@ def add_command(sub, common) -> None:
     k.add_argument("packages", nargs="+")
 
     def run_check(a):
+        from ..settings import Settings
         from .platforms.mothbot import check
+        tmp = Settings.load(getattr(a, "profile", None)).tmp_root
         bad = 0
         for p in a.packages:
-            probs = check(Path(p))
+            probs = check(Path(p), tmp)
             bad += bool(probs)
             print(f"{'OK     ' if not probs else 'PROBLEM'} {p}" + "".join(f"\n        {x}" for x in probs))
         if bad:

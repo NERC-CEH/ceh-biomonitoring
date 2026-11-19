@@ -435,3 +435,13 @@ def test_labelling_project_folders_chain_the_steps(tmp_path, monkeypatch, capsys
         cli.main(["validate", "prepare", "--project", "nope"])
     with pytest.raises(SystemExit, match="--project"):
         cli.main(["validate", "prepare"])
+
+
+def test_mothbot_site_name_is_the_project_not_a_bucket_code():
+    from ceh_biomonitoring.validation.platforms.mothbot import site_name
+    rows = pd.DataFrame({"results": ["/r/images/farm1/dep000123/dep000123_detections.parquet"],
+                         "country_folder": ["gbr"]})
+    assert site_name(rows) == "farm1"
+    assert site_name(rows, override="Farm 1 wood") == "Farm 1 wood"
+    old = pd.DataFrame({"results": ["/r/images/gbr/inference/dep000123/x.parquet"], "country_folder": ["gbr"]})
+    assert site_name(old) == "gbr"              # no project and no country table: the code is all there is

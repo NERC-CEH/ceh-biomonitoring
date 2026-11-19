@@ -127,6 +127,30 @@ def _has(v) -> bool:
     return v is not None and str(v).strip() not in ("", "nan", "None", "NaT", "<NA>")
 
 
+def site_name(rows: pd.DataFrame, settings=None, override: str | None = None) -> str:
+    """The site Mothbot shows: --site-name; else the project folder the results are in
+    (<pipeline>/<project>/<deployment>/); else the country's name; else the bucket or country code."""
+    if _has(override):
+        return str(override)
+    for r in rows.get("results", pd.Series(dtype=object)).dropna().unique():
+        p = Path(str(r)).parent
+        if p.parent.parent.name in ("images", "birds", "bats") and p.parent.name not in ("", "local"):
+            return p.parent.name
+    code = next((str(v) for c in ("country_folder", "bucket") if c in rows.columns
+                 for v in rows[c].dropna().unique() if _has(v)), "")
+    if code:
+        try:
+            from ... import countries
+            t = countries.load(settings)
+            keys = [c for c in ("country_folder", "bucket_code", "country_name") if c in t.columns]
+            hit = t[t[keys].astype(str).apply(lambda col: col.str.lower()).eq(code.lower()).any(axis=1)]
+            if len(hit) and "country_name" in hit.columns:
+                return str(hit["country_name"].iloc[0])
+        except (Exception, SystemExit):  # noqa: BLE001 - no country table
+            pass
+    return code
+
+
 # ------------------------------------------------------------------ photos of any kind
 def _open_photo(path):
     """A photo as 8-bit RGB, whatever it was saved as. Pixels stay as stored (no EXIF rotation), as the
@@ -141,7 +165,19 @@ def _open_photo(path):
     from ... import times
     src = Image.open(path)
     try:
-        src.load()
+        try:
+            src.load()
+        except OSError as e:                     # the file ends early: read as far as it goes, as the pipeline did
+            if not any(s in str(e) for s in ("truncated", "broken data stream", "premature end")):
+                raise
+            from PIL import ImageFile
+            src.close()
+            ImageFile.LOAD_TRUNCATED_IMAGES = True
+            try:
+                src = Image.open(path)
+                src.load()
+            finally:
+                ImageFile.LOAD_TRUNCATED_IMAGES = False
         taken = times.exif_time(src)
         im = src
         if im.mode in ("I;16", "I;16B", "I;16L", "I", "F"):      # 16-bit or float: scaled to 8-bit
@@ -235,7 +271,8 @@ def machine_ids(r: dict, bb, models: dict, species_list: str | None) -> list[dic
 # ------------------------------------------------------------------ building one package
 def build(rows: pd.DataFrame, pkg: Path, dataset_id: str, title: str, settings, blind: bool,
           media: Media, screens: list[dict], do_cluster: bool, cluster_opts: dict,
-          species: dict | None = None, bb=None, clock_timezone: str | None = None) -> dict:
+          species: dict | None = None, bb=None, clock_timezone: str | None = None,
+          site: str | None = None) -> dict:
     """species: {"table": the species list, "name": its file name, "about": where it came from}.
     bb: GBIF backbone look-ups (for the machine identifications)."""
     from .. import embeddings as E
@@ -348,10 +385,11 @@ def build(rows: pd.DataFrame, pkg: Path, dataset_id: str, title: str, settings, 
     dep_rows = []
     for d, g in use.groupby("deployment_id", observed=True, sort=True):
         name = next((str(n) for n in g["deployment_name"] if _has(n)), str(d)) if "deployment_name" in g else str(d)
-        site = next((str(n) for n in g.get("country_folder", pd.Series(dtype=object)) if _has(n)), "")
+        where = site_name(g, settings, site)
         nights = sorted(n for n in g["night"].unique() if n != "unknown")
         dep_rows.append({"deployment_id": str(d), "dataset_id": dataset_id, "deployment_name": name,
-                         "site_id": f"{dataset_id}/site/{site or 'site'}", "site_name_from_folder": site.replace("_", " "),
+                         "site_id": f"{dataset_id}/site/{re.sub(r'[^A-Za-z0-9_-]+', '-', where) or 'site'}",
+                         "site_name_from_folder": where.replace("_", " "),
                          "device_id_from_folder": name, "deployment_start_from_folder": nights[0] if nights else "",
                          "dataset_name_from_folder": title})
     _ndjson(rec_dir / "deployments.ndjson", dep_rows)
@@ -411,18 +449,21 @@ def build(rows: pd.DataFrame, pkg: Path, dataset_id: str, title: str, settings, 
             "clusters": int(use["cluster_id"].nunique()), "failures": len(fails)}
 
 
-def check(pkg: Path) -> list[str]:
-    """What's wrong with a package folder or .zip (empty list = it should open in Mothbot)."""
+def check(pkg: Path, tmp_root: Path | None = None) -> list[str]:
+    """What's wrong with a package folder or .zip (empty list = it should open in Mothbot).
+    A .zip is unpacked into tmp_root (the settings' tmp_root; JASMIN's /tmp is too small for big packages)."""
     pkg = Path(pkg)
     if pkg.suffix == ".zip":
         import tempfile
-        with tempfile.TemporaryDirectory() as tmp:
+        if tmp_root is not None:
+            Path(tmp_root).mkdir(parents=True, exist_ok=True)
+        with tempfile.TemporaryDirectory(prefix="cehbio_check_", dir=tmp_root) as tmp:
             with zipfile.ZipFile(pkg) as z:
                 z.extractall(tmp)
             inner = [p.parent for p in Path(tmp).rglob("dataset.json")]
             return check(inner[0]) if len(inner) == 1 else [f"{pkg.name} should hold one package (dataset.json), found {len(inner)}"]
     if not (pkg / "dataset.json").exists() and pkg.with_suffix(".zip").exists():
-        return check(pkg.with_suffix(".zip"))               # the folder was emptied when it was zipped
+        return check(pkg.with_suffix(".zip"), tmp_root)      # the folder was emptied when it was zipped
     out = []
     try:
         man = json.loads((pkg / "dataset.json").read_text())
@@ -541,7 +582,7 @@ def prepare(sel: pd.DataFrame, out: Path, settings=None, blind: bool | None = No
             cluster_method: str = "leaf", min_cluster_size: int = 3, one_package: bool = False,
             keep_unzipped: bool = False, round_date: str | None = None, species_list: str | None = None,
             species_taxon: str = "Lepidoptera", offline: bool = False, clock_timezone: str | None = None,
-            **_) -> dict:
+            site_name: str | None = None, **_) -> dict:
     """species_list: None (built from GBIF for the package's country), a CSV of your own, or "none"."""
     from .. import embeddings as E
     from .. import gbif
@@ -575,7 +616,7 @@ def prepare(sel: pd.DataFrame, out: Path, settings=None, blind: bool | None = No
                       f"species/{species['name']}", flush=True)
             res = build(rows, pkg, dataset_id, title, settings, blind, media, loaded, cluster,
                         {"method": cluster_method, "min_cluster_size": min_cluster_size}, species, bb,
-                        clock_timezone)
+                        clock_timezone, site_name)
             if "skipped" not in res:
                 res["zip"] = str(zip_package(pkg, keep_unzipped))
             print("   " + ", ".join(f"{k}: {v}" for k, v in res.items()), flush=True)

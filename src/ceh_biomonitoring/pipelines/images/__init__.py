@@ -59,6 +59,25 @@ def species_model_for(region: str, models: dict | None = None) -> str:
     return latest("species", region, models)
 
 
+def open_photo(path) -> tuple:
+    """(RGB image, repaired). A photo whose file ends early (an SD card error, or the camera stopping
+    mid-write) is read as far as it goes rather than set aside: repaired = True, and the missing part
+    comes out grey. Anything else that can't be read still fails."""
+    from PIL import Image, ImageFile
+    try:
+        with Image.open(path) as im:
+            return im.convert("RGB"), False
+    except OSError as e:
+        if not any(s in str(e) for s in ("truncated", "broken data stream", "premature end")):
+            raise
+    ImageFile.LOAD_TRUNCATED_IMAGES = True
+    try:
+        with Image.open(path) as im:
+            return im.convert("RGB"), True
+    finally:
+        ImageFile.LOAD_TRUNCATED_IMAGES = False
+
+
 # ----------------------------------------------------------------------------- dates and nights
 
 
@@ -246,10 +265,19 @@ class Images(Pipeline):
                     "image_datetime": dt.strftime("%Y-%m-%d %H:%M:%S") if dt else "",
                     "recording_session": recording_session(dt)}
             try:
-                image = Image.open(path).convert("RGB")
+                image, repaired = open_photo(path)
                 det_input = path
+                if repaired:                                   # the detector reads the file: give it a whole one
+                    det_input = Path(path).with_name("_repaired_" + Path(path).name)
+                    image.save(det_input, quality=95)
+                    print(f"[note] {Path(key).name}: the end of the photo file is missing; read what was there "
+                          f"(marked photo_repaired)", flush=True)
+                meta["photo_repaired"] = repaired
                 if params.get("enhance_contrast"):
-                    det_input = nets.enhance(path, Path(path).with_name("_enhanced_" + Path(path).name))
+                    enhanced = nets.enhance(det_input, Path(path).with_name("_enhanced_" + Path(path).name))
+                    if det_input != path:
+                        Path(det_input).unlink(missing_ok=True)
+                    det_input = enhanced
                 overlay = overlay_dir / f"{Path(key).stem}_overlay.jpg" if params.get("save_overlays") else None
                 try:
                     boxes = nets.detect_flatbug(M["detector"], det_input, overlay)
@@ -368,7 +396,7 @@ class Images(Pipeline):
             if not current:
                 none.append({"source_key": key, "filename": meta["filename"], "status": "no_detections",
                              "image_datetime": meta["image_datetime"], "recording_session": meta["recording_session"],
-                             "image_bluriness": blur, **counts})
+                             "image_bluriness": blur, "photo_repaired": meta["photo_repaired"], **counts})
 
         cols = (["source_key", "filename", "image_path", "image_datetime", "bucket_name", "deployment_name",
                  "deployment_id", "latitude", "longitude", "analysis_datetime", "recording_session", "image_bluriness",

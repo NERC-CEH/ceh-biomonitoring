@@ -192,7 +192,7 @@ In your results folder, under `images/<project>/<deployment>/` (see [Your result
 | `<deployment>_analysis_ready.parquet` | **start here**: one row per insect crop, plus one row per photo with nothing found, with its `track_id` |
 | `<deployment>_tracks.parquet` | one row per track: start and end time, number of photos, and the first crop's classification |
 | `<deployment>_detections.parquet` | the same crops before tracking |
-| `<deployment>_files.csv` | every photo and its status, including photos that couldn't be read |
+| `<deployment>_files.csv` | every photo and its status, including photos that couldn't be read. A photo whose file ends early (an SD-card error) is read as far as it goes and marked `photo_repaired`: the missing part comes out grey, so check any insects found near it |
 | `PROGRESS.txt` | how far the run has got |
 | `working/chunks/*_summary.json` | the exact models (with checksums), settings and package versions used |
 
