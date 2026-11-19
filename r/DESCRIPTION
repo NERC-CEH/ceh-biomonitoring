@@ -1,0 +1,26 @@
+Package: cehbio
+Title: UKCEH Biomonitoring Toolkit from R
+Version: 0.1.0
+Authors@R: person("Alyssa", "Duffy", email = "alyduf@ceh.ac.uk", role = c("aut", "cre"))
+Description: Use the UKCEH ceh-biomonitoring toolkit entirely from R: install it, run the bird, bat
+    and moth-trap pipelines, follow their progress, read the results, and make summary reports. The
+    models themselves run in the toolkit's Python environment, which this package sets up and drives,
+    so R users never need to write Python. Reports are made from the same tables as the toolkit's own
+    Python reports, so both give the same numbers.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends: R (>= 4.1)
+Imports:
+    jsonlite,
+    utils,
+    stats,
+    tools
+Suggests:
+    ggplot2,
+    quarto,
+    knitr,
+    arrow,
+    EntoInsights,
+    testthat (>= 3.0.0)
+Config/testthat/edition: 3
+RoxygenNote: 7.3.2

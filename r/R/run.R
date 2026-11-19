@@ -1,0 +1,150 @@
+# Running the toolkit from R. Every function here calls the same `cehbio` commands as the Python route,
+# so results, folders and reports are identical whichever language you use.
+
+#' The Python that runs the toolkit
+#'
+#' Looks, in order, at `options(cehbio.python = ...)`, the `CEHBIO_PYTHON` environment variable, and the
+#' `ceh-biomonitoring` conda environment in the usual Miniforge / Miniconda places.
+#' @return the path to python, or NULL if the toolkit isn't installed yet
+#' @export
+cehbio_python <- function() {
+  given <- c(getOption("cehbio.python", ""), Sys.getenv("CEHBIO_PYTHON"))
+  given <- given[nzchar(given)]
+  if (length(given) && file.exists(given[1])) return(normalizePath(given[1], winslash = "/"))
+  home <- path.expand("~")
+  if (.Platform$OS.type == "windows") home <- Sys.getenv("USERPROFILE", home)
+  bases <- c(file.path(home, c("miniforge3", "miniconda3", "anaconda3", "mambaforge")),
+             file.path(Sys.getenv("LOCALAPPDATA"), c("miniforge3", "miniconda3")),
+             "C:/ProgramData/miniforge3", "/opt/conda")
+  exe <- if (.Platform$OS.type == "windows") "python.exe" else file.path("bin", "python")
+  cand <- file.path(bases, "envs", "ceh-biomonitoring", exe)
+  hit <- cand[file.exists(cand)]
+  if (length(hit)) normalizePath(hit[1], winslash = "/") else NULL
+}
+
+.conda <- function() {
+  home <- if (.Platform$OS.type == "windows") Sys.getenv("USERPROFILE") else path.expand("~")
+  exe <- if (.Platform$OS.type == "windows") c("condabin/conda.bat", "Scripts/conda.exe") else "bin/conda"
+  cand <- c(Sys.which("conda"), Sys.which("mamba"),
+            as.vector(outer(file.path(home, c("miniforge3", "miniconda3", "mambaforge")), exe, file.path)),
+            file.path(Sys.getenv("LOCALAPPDATA"), "miniforge3", exe))
+  cand <- cand[nzchar(cand) & file.exists(cand)]
+  if (length(cand)) cand[1] else NULL
+}
+
+#' Run any cehbio command
+#'
+#' `cehbio("status")` is the same as typing `cehbio status` in a terminal. Output is shown as it runs.
+#' @param ... the command and its options, e.g. `cehbio("run", "bats", "--folder", "E:/card")`
+#' @param echo show the output as it runs (default TRUE)
+#' @return invisibly, the exit status (0 = it worked)
+#' @export
+cehbio <- function(..., echo = TRUE) {
+  py <- cehbio_python()
+  if (is.null(py)) stop("The toolkit isn't installed yet. Run cehbio_install() first.", call. = FALSE)
+  args <- c("-m", "ceh_biomonitoring", unlist(list(...)))
+  args <- vapply(args, shQuote, "", type = if (.Platform$OS.type == "windows") "cmd" else "sh")
+  if (!echo) return(invisible(suppressWarnings(system2(py, args, stdout = TRUE, stderr = TRUE))))
+  code <- system2(py, args)
+  if (!identical(as.integer(code), 0L)) warning("cehbio stopped with an error (see above).", call. = FALSE)
+  invisible(code)
+}
+
+`%||%` <- function(a, b) if (is.null(a)) b else a
+
+.opt <- function(name, value) {
+  if (is.null(value) || identical(value, FALSE)) return(character())
+  if (isTRUE(value)) return(paste0("--", name))
+  c(paste0("--", name), as.character(value))
+}
+
+#' Install the toolkit's Python side, once
+#'
+#' Makes a conda environment called `ceh-biomonitoring` and installs the toolkit and the pipelines you
+#' choose into it. Needs Miniforge (https://conda-forge.org/download/) or another conda.
+#' @param pipelines any of "birds", "bats", "images", "validation", "reports", or "all"
+#' @param source where to install from (default: the newest version on GitHub)
+#' @export
+cehbio_install <- function(pipelines = "reports",
+                           source = "https://github.com/NERC-CEH/ceh-biomonitoring/archive/refs/heads/main.zip") {
+  conda <- .conda()
+  if (is.null(conda)) {
+    stop("No conda found. Install Miniforge from https://conda-forge.org/download/ (or run ",
+         "reticulate::install_miniconda()), then run cehbio_install() again.", call. = FALSE)
+  }
+  if (is.null(cehbio_python())) {
+    message("Making the ceh-biomonitoring environment (a few minutes, once) ...")
+    system2(conda, c("create", "-n", "ceh-biomonitoring", "python=3.11", "-y"))
+  }
+  py <- cehbio_python()
+  if (is.null(py)) stop("The environment wasn't made: see the messages above.", call. = FALSE)
+  extras <- paste(pipelines, collapse = ",")
+  message("Installing the toolkit with: ", extras)
+  if (.Platform$OS.type != "windows" && dir.exists("/gws")) {        # JASMIN's /tmp is too small for torch
+    tmp <- file.path("/var/tmp", Sys.getenv("USER"))
+    dir.create(tmp, showWarnings = FALSE)
+    Sys.setenv(TMPDIR = tmp)
+  }
+  system2(py, c("-m", "pip", "install", "--upgrade", shQuote(sprintf("ceh-biomonitoring[%s] @ %s", extras, source))))
+  cehbio_check()
+}
+
+#' Check settings, results folder and what's installed
+#' @export
+cehbio_check <- function() cehbio("check")
+
+#' Run a pipeline on a deployment
+#'
+#' @param pipeline "birds", "bats" or "images"
+#' @param folder the recordings or photos (never moved or changed)
+#' @param project the folder the results go in, e.g. "my-woods"
+#' @param deployment a name for this recorder or trap at this place
+#' @param device e.g. "audiomoth", "song-meter", "lepisense", "ami-trap"
+#' @param bucket an object-store bucket instead of a folder
+#' @param set named list of settings, e.g. `list(region = "uk")`
+#' @param max_files try this many files first
+#' @param ... more options as name = value, e.g. `here = TRUE`, `files_per_chunk = 200`
+#' @export
+cehbio_run <- function(pipeline, folder = NULL, project = NULL, deployment, device = NULL, bucket = NULL,
+                       set = NULL, max_files = NULL, ...) {
+  sets <- if (length(set)) as.vector(rbind("--set", paste0(names(set), "=", unlist(set)))) else character()
+  more <- list(...)
+  extra <- unlist(Map(function(n, v) .opt(gsub("_", "-", n), v), names(more), more))
+  cehbio("run", pipeline, .opt("folder", folder), .opt("bucket", bucket), .opt("project", project),
+         .opt("deployment", deployment), .opt("device", device), .opt("max-files", max_files), sets, extra)
+}
+
+#' How far runs have got
+#' @param pipeline,project,deployment narrow it down (all optional)
+#' @param watch keep checking every this many seconds until nothing is running
+#' @export
+cehbio_status <- function(pipeline = NULL, project = NULL, deployment = NULL, watch = NULL) {
+  cehbio("status", pipeline, .opt("project", project), .opt("deployment", deployment), .opt("watch", watch))
+}
+
+#' Join a run's parts into its results (only needed after no_auto_combine)
+#' @export
+cehbio_combine <- function(pipeline, project, deployment) {
+  cehbio("combine", pipeline, .opt("project", project), .opt("deployment", deployment))
+}
+
+#' What time a light trap's clock kept
+#' @param folder,bucket,deployment,results where the photos or results are
+#' @param lat,lon the site; `timezone` e.g. "Europe/London"
+#' @export
+cehbio_clock_check <- function(lat, lon, timezone = NULL, folder = NULL, results = NULL, bucket = NULL,
+                               deployment = NULL, device = NULL) {
+  cehbio("clock-check", .opt("lat", lat), .opt("lon", lon), .opt("timezone", timezone), .opt("folder", folder),
+         .opt("results", results), .opt("bucket", bucket), .opt("deployment", deployment), .opt("device", device))
+}
+
+#' Make the report tables for a project
+#'
+#' Writes deployments, nights (with weather and the moon), individuals and species tables to
+#' `<results>/<pipeline>/<project>/report/data/`. See `read_report_data()`.
+#' @param sites a CSV with deployment, latitude, longitude, timezone, clock, start, end
+#' @param weather "open-meteo" (non-commercial only), "era5-land" (commercial use allowed) or "none"
+#' @export
+cehbio_report_data <- function(pipeline, project, sites = NULL, weather = "open-meteo") {
+  cehbio("report-data", pipeline, .opt("project", project), .opt("sites", sites), .opt("weather", weather))
+}

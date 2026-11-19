@@ -60,3 +60,8 @@ ultrasonic/batdetect_ultrasonic/tmp/*
 # example data is meant to be in the repository
 !examples/**/*.wav
 !examples/**/*.jpg
+
+# R
+.Rhistory
+.RData
+.Rproj.user/

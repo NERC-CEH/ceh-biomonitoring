@@ -13,7 +13,8 @@ Tools from the UK Centre for Ecology & Hydrology (UKCEH) for biodiversity monito
 | Bats in ultrasonic recordings | **BatDetect2** | `cehbio run bats` | [Bats](docs/bats.md) |
 | Moths and other insects in light-trap images | insect detection, moth/non-moth, order and regional species models for AMI traps and LepiSense | `cehbio run images` | [Images](docs/images.md) |
 | Expert checks of the results (birds, bats, images) | fair samples for experts, packaged as audio clips or for the [Mothbot](https://mothbot-classify.vercel.app) labelling site, and their answers read back | `cehbio validate` | [Manual validation](docs/validation.md), [Sampling methods](docs/sampling-methods.md) |
-| Reports: tables ready for Python or R, with weather and the moon | weather from Open-Meteo or ERA5-Land; works with EntoInsights | `cehbio report-data` | [Reporting](docs/reporting.md) |
+| Summary reports, and tables ready for Python or R, with weather and the moon | weather from Open-Meteo or ERA5-Land; works with EntoInsights | `cehbio report` | [Reporting](docs/reporting.md) |
+| Everything from R | the `cehbio` R package | `cehbio_run()`, `cehbio_report()` ... | [From R](docs/r.md) |
 
 You only install what you need. Everything shares one environment, called `ceh-biomonitoring`.
 
@@ -51,6 +52,9 @@ Put the pipelines you want in the brackets, e.g. `[birds]`, `[images]`, `[birds,
 > **On JASMIN:** install on a sci server (e.g. `ssh sci-vm-04`), not a login node. The installer works around JASMIN's small `/tmp` limit for you.
 
 ## Start here
+
+**Prefer R?** Everything below can be done from R instead: see [Using the toolkit from R](docs/r.md).
+
 
 You type each command into a terminal (on Windows, the **Miniforge Prompt**) after `conda activate ceh-biomonitoring`. No coding is needed.
 
@@ -115,8 +119,9 @@ Read them in this order:
 2. the guide for your pipeline: [Birds](docs/birds.md), [Bats](docs/bats.md) or [Images](docs/images.md)
 3. [Running and results](docs/running.md): big jobs, computing clusters, following a run, where everything goes
 4. [Manual validation](docs/validation.md) and [Sampling methods](docs/sampling-methods.md): expert checks
-5. [Reporting](docs/reporting.md): a project's results as tables for reports (Python or R), with weather and the moon
-6. For sending data to UKCEH: [Setting up your sites](docs/setting-up-sites.md) and the [Upload guide](docs/upload-guide.md)
+5. [Reporting](docs/reporting.md): summary reports and report-ready tables, with weather and the moon
+6. [Using the toolkit from R](docs/r.md): everything from R, from installing to reports
+7. For sending data to UKCEH: [Setting up your sites](docs/setting-up-sites.md) and the [Upload guide](docs/upload-guide.md)
 
 **Words used in the guides:**
 
@@ -139,7 +144,8 @@ You only need the guides. The rest is there for the toolkit itself.
 | `examples/` | small open example data sets, with credits |
 | `credentials/` | an *example* credentials file. Your real one goes in `~/.config/ceh-biomonitoring/`, never here |
 | `install.sh`, `environment.yml`, `pyproject.toml` | the installer and what it installs |
-| `src/` | the code |
+| `src/` | the code (Python) |
+| `r/` | the `cehbio` R package: the toolkit from R ([guide](docs/r.md)) |
 | `tests/` | checks that the code still works, for developers |
 
 Your results are never saved in here: they go in your results folder.

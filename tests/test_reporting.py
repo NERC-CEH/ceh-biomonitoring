@@ -148,3 +148,23 @@ def test_deployment_dates_leave_set_up_tests_out(settings, tmp_path):
     ind = pd.read_parquet(out / "individuals.parquet")
     assert set(ind["night"]) == {"2026-05-12"} and any("outside the deployment dates" in n for n in r["notes"])
     assert ind.loc[ind["kind"] == "other insect", "score_type"].tolist() in ([], ["order_confidence"])
+
+
+def test_html_reports_are_made_and_never_name_the_user_or_machine(settings):
+    pytest.importorskip("matplotlib")
+    from ceh_biomonitoring.reporting import html
+    rp = _images_run(settings)
+    _images_run(settings, dep="trap-2")
+    chunks.write_json(rp.chunks / "trap-1_chunk_00001_summary.json",
+                      {"status": "complete", "provenance": {"user": "secret-user", "host": "secret-host",
+                                                            "models": {"detector": {"model": "insect-detector-flatbug-m-v2",
+                                                                                    "by": "flat-bug", "licence": "MIT"},
+                                                                       "perch_model": "/home/users/secret-user/perch_v2_cpu/1"}}})
+    files = html.make(settings, "images", "farm", weather="none")
+    assert sorted(f.name for f in files) == ["farm_project.html", "trap-1.html", "trap-2.html"]
+    page = (files[0].parent / "trap-1.html").read_text(encoding="utf-8")
+    assert "Noctua pronuba" in page and "insect-detector-flatbug-m-v2" in page and "data:image/png;base64" in page
+    for secret in ("secret-user", "secret-host"):
+        assert secret not in page
+    t = json.loads((files[0].parent / "data" / "text.json").read_text())
+    assert t["style"]["main"] == "#133b64" and t["deployments"]["trap-1"][0].startswith("The light trap worked")

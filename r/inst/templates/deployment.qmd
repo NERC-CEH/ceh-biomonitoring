@@ -1,0 +1,146 @@
+---
+title: "`r params$deployment`"
+subtitle: "`r params$subtitle`"
+format:
+  html:
+    embed-resources: true
+    toc: false
+    theme: none
+    css: report.css
+execute:
+  echo: false
+  warning: false
+  message: false
+params:
+  data_folder: ""
+  pipeline: "images"
+  project: ""
+  deployment: ""
+  subtitle: ""
+---
+
+```{r setup}
+library(cehbio)
+d <- read_report_data(params$pipeline, params$project, folder = params$data_folder)
+t <- d$text
+lab <- t$labels
+dep <- params$deployment
+info <- d$deployments[d$deployments$deployment_id == dep, ]
+nights <- d$nights[d$nights$deployment_id == dep, ]
+if (!"in_deployment" %in% names(nights)) nights$in_deployment <- TRUE
+inside <- nights[as.logical(nights$in_deployment), ]
+sp <- d$species[d$species$deployment_id == dep, ]
+main_sp <- if (params$pipeline == "images") sp[sp$kind != "other insect", ] else sp
+fmt <- function(x) format(round(x), big.mark = ",", trim = TRUE)
+csv_link <- function(df, name, label) {
+  b <- jsonlite::base64_enc(paste(utils::capture.output(utils::write.csv(df, row.names = FALSE)), collapse = "\n"))
+  sprintf("<a class='button' download='%s' href='data:text/csv;base64,%s'>%s</a>", name, gsub("\n", "", b), label)
+}
+```
+
+::: {.note}
+`r t$methods$caveat`
+:::
+
+## Summary
+
+::: {.tiles}
+::: {.tile}
+**`r fmt(info$nights_worked)`** [nights working]{.lab}
+:::
+::: {.tile}
+**`r fmt(info$hours_worked)`** [hours working]{.lab}
+:::
+::: {.tile}
+**`r fmt(info$individuals)`** [`r lab$unit`]{.lab}
+:::
+::: {.tile}
+**`r fmt(nrow(main_sp))`** [`r if (params$pipeline == "images") "moth species" else "species"`]{.lab}
+:::
+:::
+
+```{r headlines, results="asis"}
+cat(paste0("- ", t$deployments[[dep]], collapse = "\n"))
+```
+
+## When it was working
+
+```{r working, fig.width=9.5, fig.height=2.6}
+plot_working(d, dep)
+```
+
+Hours between the first and last `r lab$file` of each night.
+
+## Activity
+
+```{r activity, fig.width=9.5, fig.height=2.6}
+plot_activity(d, dep)
+```
+
+```{r temperature, fig.width=9.5, fig.height=2.4}
+p <- plot_temperature(d, dep)
+if (!is.null(p)) p
+```
+
+`r paste0(toupper(substr(lab$unit, 1, 1)), substring(lab$unit, 2))` per hour the device was working, each night`r if ("temperature_mean_c" %in% names(nights)) ", with the night's mean temperature below." else "."`
+
+<details><summary>Night by night (table)</summary>
+
+```{r nights-table}
+cols <- intersect(c("night", "hours_worked", "files", "individuals", "individuals_per_hour", "temperature_mean_c",
+                    "precipitation_total_mm", "wind_speed_mean_ms", "moon_illumination"), names(inside))
+knitr::kable(inside[, cols], digits = 2, row.names = FALSE)
+```
+
+```{r nights-csv, results="asis"}
+cat(csv_link(inside, paste0(dep, "_nights.csv"), "Download (CSV)"))
+```
+
+</details>
+
+## What was recorded
+
+```{r groups-heading, results="asis", eval=params$pipeline == "images"}
+cat("### Insect groups\n\n")
+```
+
+```{r groups, fig.width=9.5, fig.height=3.4, eval=params$pipeline == "images"}
+plot_groups(d, dep)
+```
+
+### `r if (params$pipeline == "images") "Moth species" else "Species"`: the 20 most often recorded
+
+```{r species, fig.width=9.5, fig.height=6.8}
+p <- plot_species(d, dep)
+if (!is.null(p)) p
+```
+
+```{r species-table}
+top <- utils::head(main_sp[order(-main_sp$individuals), ], 20)
+if (nrow(top)) {
+  nm <- if ("common_name" %in% names(top)) ifelse(!is.na(top$common_name) & nzchar(top$common_name),
+                                                  paste0(top$common_name, " (", top$taxon, ")"), top$taxon) else top$taxon
+  knitr::kable(data.frame(species = nm, individuals = fmt(top$individuals), nights = top$nights,
+                          first = top$first_night, last = top$last_night,
+                          `mean score` = sprintf("%.2f", top$score_mean), check.names = FALSE),
+               align = "lrrllr", row.names = FALSE)
+}
+```
+
+```{r species-csv, results="asis"}
+if (nrow(main_sp)) cat(fmt(nrow(main_sp)), " in all. ",
+                       csv_link(main_sp[order(-main_sp$individuals), ], paste0(dep, "_species.csv"),
+                                "Download the full list (CSV)"))
+```
+
+## How this was done
+
+```{r methods, results="asis"}
+m <- t$methods
+cat(m$how, "\n\n", m$unit, "\n\n", m$night, "\n\n", m$weather, m$moon, "\n\n")
+if (length(m$models)) cat("Models used:\n\n", paste0("- ", m$models, collapse = "\n"), "\n\n")
+if (length(m$citations)) cat("Please cite:\n\n", paste0("- ", m$citations, collapse = "\n"), "\n\n")
+if (length(m$notes)) cat("<details><summary>Notes on how this report was made</summary>\n\n",
+                         paste0("- ", m$notes, collapse = "\n"), "\n\n</details>\n\n")
+cat("[", m$made_with, " Report made in R.]{.small}\n", sep = "")
+```

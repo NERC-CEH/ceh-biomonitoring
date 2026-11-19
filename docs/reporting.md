@@ -1,12 +1,30 @@
 # Reporting
 
-Reports start from one set of tables, made from a project's results by `cehbio report-data`. Reports made in Python and reports made in R both read these tables, so they give the same numbers. Everything stays in your results folder.
+Reports start from one set of tables, made from a project's results by `cehbio report-data`. Reports made in Python and reports made in R both read these tables, and the same words, so they say the same thing. Everything stays in your results folder.
+
+## Summary reports
+
+| Python | R ([using the toolkit from R](r.md)) |
+|---|---|
+| `cehbio report images --project farm1 --sites sites.csv` | `cehbio_report("images", "farm1", sites = "sites.csv")` |
+
+Both write one self-contained HTML page per deployment, and one for the project, to `ceh-biomonitoring-results/images/farm1/report/`. They describe what was recorded; they don't interpret it or compare it with other places. Each covers:
+
+- a warning that the identifications are the models' suggestions;
+- a summary: nights and hours working, individuals, species, and plain-language headlines;
+- when the device was working, and activity per hour, with the night's temperature in its own chart below;
+- what was recorded: insect groups (images), and the 20 most often recorded species, with a table and the full list to download;
+- how it was done: the method, what an individual is, the night, the weather source and its credit, the models used and what to cite, and any assumptions.
+
+The reports never show the user or computer names kept in the run records. Add `--refresh` (Python) or `refresh = TRUE` (R) after new results, to remake the tables first.
+
+## The tables
 
 ```bash
 cehbio report-data images --project farm1 --sites sites.csv
 ```
 
-This writes the tables to `ceh-biomonitoring-results/images/farm1/report/data/`, as `.csv` (opens in Excel) and `.parquet` (smaller and faster):
+(`cehbio report` makes them for you the first time.) This writes the tables to `ceh-biomonitoring-results/images/farm1/report/data/`, as `.csv` (opens in Excel) and `.parquet` (smaller and faster):
 
 | Table | One row per | What's in it |
 |---|---|---|
@@ -15,6 +33,7 @@ This writes the tables to `ceh-biomonitoring-results/images/farm1/report/data/`,
 | `individuals` | individual | an insect followed through photos (a track), a bird's calling event or a bat pass, with its night, name, kind and score |
 | `species` | deployment and species | individuals, nights seen, first and last night, mean and best score |
 | `about.json` | | models and versions, weather source and its credit, and every assumption made (e.g. which clock) |
+| `text.json` | | the reports' words with their numbers, and the colours, shared by the Python and R reports |
 | `entoinsights/` | | the results in [EntoInsights](https://github.com/AMI-system/EntoInsights)' format, so its R functions work on them too |
 
 **An individual** is the same unit that [manual validation](validation.md) uses:

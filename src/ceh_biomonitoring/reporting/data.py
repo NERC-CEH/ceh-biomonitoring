@@ -10,6 +10,7 @@ the same numbers. Written to <results>/<pipeline>/<project>/report/data/, as .pa
                  event, a bat pass (the same units as cehbio validate uses), with its night, name and score
   species        one row per deployment and species (or insect order): individuals, nights, scores
   about.json     what made it: models, settings, sources, credits, and every assumption (e.g. the clock)
+  text.json      the report's words with their numbers (headlines, methods), so Python and R reports match
   entoinsights/  the results in EntoInsights' format (AMI-system/EntoInsights), so its functions work too
 
 A night runs noon to noon on the device's own clock, named by the evening it starts. Weather needs each
@@ -268,6 +269,8 @@ def build(settings, pipeline: str, project: str, deployments: list[str] | None =
              "weather": {"source": weather, **W.SOURCES.get(weather, {})} if weather and weather != "none" else None,
              "moon": "Schlyter's low-precision method (about 1 degree)", "models": prov, "notes": notes}
     (out / "about.json").write_text(json.dumps(about, indent=2, default=str))
+    from . import text
+    text.write(out, tables, about)
     return {"out": str(out), "deployments": len(dep_rows), "nights": len(tables["nights"]),
             "individuals": len(tables["individuals"]), "species": len(tables["species"]), "notes": notes}
 

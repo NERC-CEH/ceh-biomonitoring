@@ -1,0 +1,67 @@
+---
+title: "`r params$project`"
+subtitle: "`r params$subtitle`"
+format:
+  html:
+    embed-resources: true
+    theme: none
+    css: report.css
+execute:
+  echo: false
+  warning: false
+  message: false
+params:
+  data_folder: ""
+  pipeline: "images"
+  project: ""
+  subtitle: ""
+---
+
+```{r setup}
+library(cehbio)
+d <- read_report_data(params$pipeline, params$project, folder = params$data_folder)
+t <- d$text
+lab <- t$labels
+deps <- d$deployments[order(d$deployments$deployment_id), ]
+```
+
+::: {.note}
+`r t$methods$caveat`
+:::
+
+## Summary
+
+```{r headlines, results="asis"}
+cat(paste0("- ", t$project_summary, collapse = "\n"))
+```
+
+## Deployments
+
+```{r table}
+knitr::kable(data.frame(deployment = deps$deployment_id, `first night` = deps$first_night,
+                        `last night` = deps$last_night, nights = deps$nights_worked,
+                        hours = round(deps$hours_worked), individuals = format(deps$individuals, big.mark = ","),
+                        `species / groups` = deps$taxa, check.names = FALSE), align = "lllrrrr", row.names = FALSE)
+```
+
+```{r per-hour, fig.width=9.5, fig.height=2.4}
+s <- report_style(d)
+per <- ifelse(deps$hours_worked > 0, deps$individuals / deps$hours_worked, 0)
+cehbio:::.hbars(deps$deployment_id, round(per, 1), paste(lab$unit, "per hour working"), s)
+```
+
+Average activity per hour working. Deployments ran on different nights and places, so this describes them; it doesn't rank them.
+
+```{r links, results="asis"}
+cat(paste0("[", deps$deployment_id, "](", deps$deployment_id, ".html)", collapse = " · "))
+```
+
+## How this was done
+
+```{r methods, results="asis"}
+m <- t$methods
+cat(m$how, "\n\n", m$unit, "\n\n", m$night, "\n\n", m$weather, m$moon, "\n\n")
+if (length(m$models)) cat("Models used:\n\n", paste0("- ", m$models, collapse = "\n"), "\n\n")
+if (length(m$citations)) cat("Please cite:\n\n", paste0("- ", m$citations, collapse = "\n"), "\n\n")
+cat("[", m$made_with, " Report made in R.]{.small}\n", sep = "")
+```

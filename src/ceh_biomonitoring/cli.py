@@ -469,6 +469,8 @@ def build_parser() -> argparse.ArgumentParser:
     _add_clock(sub, common)
     from .reporting.data import add_command as _add_report_data
     _add_report_data(sub, common)
+    from .reporting.html import add_command as _add_report
+    _add_report(sub, common)
     sub.add_parser("combine", parents=[common, dep], help="merge chunk outputs + QA").set_defaults(func=cmd_combine)
 
     # Plug-ins (e.g. the internal repo) add commands via entry-point group "ceh_biomonitoring.commands":
