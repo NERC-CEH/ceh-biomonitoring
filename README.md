@@ -13,6 +13,7 @@ Tools from the UK Centre for Ecology & Hydrology (UKCEH) for biodiversity monito
 | Bats in ultrasonic recordings | **BatDetect2** | `cehbio run bats` | [Bats](docs/bats.md) |
 | Moths and other insects in light-trap images | insect detection, moth/non-moth, order and regional species models for AMI traps and LepiSense | `cehbio run images` | [Images](docs/images.md) |
 | Expert checks of the results (birds, bats, images) | fair samples for experts, packaged as audio clips or for the [Mothbot](https://mothbot-classify.vercel.app) labelling site, and their answers read back | `cehbio validate` | [Manual validation](docs/validation.md), [Sampling methods](docs/sampling-methods.md) |
+| Reports: tables ready for Python or R, with weather and the moon | weather from Open-Meteo or ERA5-Land; works with EntoInsights | `cehbio report-data` | [Reporting](docs/reporting.md) |
 
 You only install what you need. Everything shares one environment, called `ceh-biomonitoring`.
 
@@ -114,7 +115,8 @@ Read them in this order:
 2. the guide for your pipeline: [Birds](docs/birds.md), [Bats](docs/bats.md) or [Images](docs/images.md)
 3. [Running and results](docs/running.md): big jobs, computing clusters, following a run, where everything goes
 4. [Manual validation](docs/validation.md) and [Sampling methods](docs/sampling-methods.md): expert checks
-5. For sending data to UKCEH: [Setting up your sites](docs/setting-up-sites.md) and the [Upload guide](docs/upload-guide.md)
+5. [Reporting](docs/reporting.md): a project's results as tables for reports (Python or R), with weather and the moon
+6. For sending data to UKCEH: [Setting up your sites](docs/setting-up-sites.md) and the [Upload guide](docs/upload-guide.md)
 
 **Words used in the guides:**
 

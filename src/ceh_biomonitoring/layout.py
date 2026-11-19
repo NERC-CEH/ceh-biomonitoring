@@ -26,7 +26,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 
-RESERVED = {"inference", "keys", "working", "labelling", "examples", "upload_logs"}
+RESERVED = {"inference", "keys", "working", "labelling", "examples", "upload_logs", "report"}
 LABELLING_STEPS = ("1_sample", "2_for_experts", "3_answers")
 
 
