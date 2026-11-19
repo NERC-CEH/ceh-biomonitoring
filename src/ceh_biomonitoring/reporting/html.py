@@ -265,7 +265,12 @@ def project_page(data: Path, t: dict) -> str:
 
 
 def make(settings, pipeline: str, project: str, sites: str | None = None, weather: str = "open-meteo",
-         refresh: bool = False) -> list[Path]:
+         refresh: bool = False, formats: list[str] | None = None, reference_doc: str | None = None) -> list[Path]:
+    """Reports in each of `formats` (html, docx, pdf; default html)."""
+    formats = formats or ["html"]
+    bad = sorted(set(formats) - {"html", "docx", "pdf"})
+    if bad:
+        raise SystemExit(f"Unknown report format(s): {', '.join(bad)}. Choose from html, docx, pdf.")
     from . import data as D
     data = settings.outputs_root / pipeline / project / "report" / "data"
     if refresh or not (data / "text.json").exists():
@@ -273,14 +278,18 @@ def make(settings, pipeline: str, project: str, sites: str | None = None, weathe
     t = json.loads((data / "text.json").read_text(encoding="utf-8"))
     out = data.parent
     written = []
-    for dep in t["deployments"]:
-        p = out / f"{dep}.html"
-        p.write_text(deployment_page(data, dep, t), encoding="utf-8")
-        written.append(p)
-    if len(t["deployments"]) > 1:
-        p = out / f"{project}_project.html"
-        p.write_text(project_page(data, t), encoding="utf-8")
-        written.append(p)
+    if "html" in formats:
+        for dep in t["deployments"]:
+            p = out / f"{dep}.html"
+            p.write_text(deployment_page(data, dep, t), encoding="utf-8")
+            written.append(p)
+        if len(t["deployments"]) > 1:
+            p = out / f"{project}_project.html"
+            p.write_text(project_page(data, t), encoding="utf-8")
+            written.append(p)
+    if set(formats) - {"html"}:
+        from . import document
+        written += document.make(data, t, formats, reference_doc)
     return written
 
 
@@ -293,11 +302,15 @@ def add_command(sub, common) -> None:
     p.add_argument("--sites", help="CSV: deployment, latitude, longitude, timezone, clock, start, end")
     p.add_argument("--weather", default="open-meteo", choices=["open-meteo", "era5-land", "none"])
     p.add_argument("--refresh", action="store_true", help="remake the report data first (after new results)")
+    p.add_argument("--format", nargs="+", default=["html"], choices=["html", "docx", "pdf"],
+                   help="html (default), docx (Word) and/or pdf; Word and PDF need Quarto (pip install quarto-cli)")
+    p.add_argument("--reference-doc", help="a Word file whose styles the Word report uses")
 
     def go(a):
         from ..settings import Settings
         s = Settings.load(getattr(a, "profile", None))
-        files = make(s, a.pipeline, a.project, a.sites, a.weather, a.refresh or bool(a.sites))
+        files = make(s, a.pipeline, a.project, a.sites, a.weather, a.refresh or bool(a.sites), a.format,
+                     a.reference_doc)
         print(f"{len(files)} reports in {files[0].parent}:" if files else "No reports made.")
         for f in files:
             print(f"  {f.name}")

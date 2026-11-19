@@ -168,3 +168,21 @@ def test_html_reports_are_made_and_never_name_the_user_or_machine(settings):
         assert secret not in page
     t = json.loads((files[0].parent / "data" / "text.json").read_text())
     assert t["style"]["main"] == "#133b64" and t["deployments"]["trap-1"][0].startswith("The light trap worked")
+
+
+def test_word_reports_have_the_same_words_and_charts(settings):
+    pytest.importorskip("matplotlib")
+    from ceh_biomonitoring.reporting import document, html
+    try:
+        document.quarto()
+    except SystemExit:
+        pytest.skip("Quarto isn't installed")
+    import zipfile
+    _images_run(settings)
+    files = html.make(settings, "images", "farm", weather="none", formats=["docx"])
+    assert [f.name for f in files] == ["trap-1.docx"]
+    z = zipfile.ZipFile(files[0])
+    text = z.read("word/document.xml").decode("utf-8")
+    assert "The light trap worked on 2 nights" in text and "Noctua pronuba" in text
+    assert sum(n.startswith("word/media/") for n in z.namelist()) >= 3
+    assert (files[0].parent / "trap-1_species.csv").exists()

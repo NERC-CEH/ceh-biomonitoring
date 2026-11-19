@@ -93,7 +93,7 @@ knitr::kable(inside[, cols], digits = 2, row.names = FALSE)
 ```
 
 ```{r nights-csv, results="asis"}
-cat(csv_link(inside, paste0(dep, "_nights.csv"), "Download (CSV)"))
+if (knitr::is_html_output()) cat(csv_link(inside, paste0(dep, "_nights.csv"), "Download (CSV)"))
 ```
 
 </details>
@@ -128,9 +128,15 @@ if (nrow(top)) {
 ```
 
 ```{r species-csv, results="asis"}
-if (nrow(main_sp)) cat(fmt(nrow(main_sp)), " in all. ",
-                       csv_link(main_sp[order(-main_sp$individuals), ], paste0(dep, "_species.csv"),
-                                "Download the full list (CSV)"))
+if (nrow(main_sp)) {
+  full <- main_sp[order(-main_sp$individuals), ]
+  if (knitr::is_html_output()) {
+    cat(fmt(nrow(main_sp)), " in all. ", csv_link(full, paste0(dep, "_species.csv"), "Download the full list (CSV)"))
+  } else {
+    utils::write.csv(full, file.path(dirname(params$data_folder), paste0(dep, "_species.csv")), row.names = FALSE)
+    cat(fmt(nrow(main_sp)), " in all: the full list is `", dep, "_species.csv` beside this report.", sep = "")
+  }
+}
 ```
 
 ## How this was done

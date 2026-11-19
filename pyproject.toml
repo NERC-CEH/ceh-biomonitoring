@@ -52,8 +52,9 @@ validation = [                    # cehbio validate prepare: Mothbot packages, a
     "soundfile>=0.13",
     "matplotlib>=3.8",            # spectrograms of audio clips
 ]
-reports = [                       # cehbio report: charts in the summary reports
+reports = [                       # cehbio report: charts, and Word and PDF versions
     "matplotlib>=3.8",
+    "quarto-cli>=1.6",            # Quarto, for Word and PDF (HTML doesn't need it)
 ]
 dev = [
     "pytest>=8",
