@@ -1,13 +1,14 @@
 """Run one chunk, and combine a deployment's chunks. Shared by every pipeline.
 
-Outputs under <outputs_root>/<pipeline>/<country>/inference/<deployment>/:
-    run_params.json                         settings used for this deployment
-    chunks/<dep>_chunk_00001_detections.parquet
-    chunks/<dep>_chunk_00001_files.csv      every file: detections / no_detections / failed
-    chunks/<dep>_chunk_00001_summary.json   status, counts, provenance
-    chunks/<dep>_chunk_00001_keep/          extra files a pipeline keeps (e.g. Perch scores)
+Outputs under <outputs_root>/<pipeline>/<project>/<deployment>/ (layout.py has the whole layout):
+    working/run_params.json                         settings used for this deployment
+    working/chunks/<dep>_chunk_00001_detections.parquet
+    working/chunks/<dep>_chunk_00001_files.csv      every file: detections / no_detections / failed
+    working/chunks/<dep>_chunk_00001_summary.json   status, counts, provenance
+    working/chunks/<dep>_chunk_00001_keep/          extra files a pipeline keeps (e.g. Perch scores)
+    PROGRESS.txt                                    updated after every chunk
 and after `cehbio combine`:
-    <dep>_detections.parquet, <dep>_files.csv, <dep>_qa.json
+    <dep>_detections.parquet (+ .csv up to a million rows), <dep>_files.csv, <dep>_qa.json
 """
 from __future__ import annotations
 
@@ -17,8 +18,8 @@ from pathlib import Path
 
 import pandas as pd
 
-from . import devices, objectstore, provenance
-from .chunks import manifest_path, now_utc, read_chunk, write_json
+from . import devices, layout, objectstore, progress, provenance
+from .chunks import now_utc, read_chunk, write_json
 from .pipelines.base import Pipeline
 from .settings import Settings
 
@@ -34,18 +35,26 @@ def link_or_copy(src: Path, dest: Path) -> Path:
     return dest
 
 
-def deployment_dir(settings: Settings, pipeline: Pipeline, country: str, deployment: str) -> Path:
-    return settings.pipeline_dir(pipeline.name, country) / "inference" / deployment
+CSV_MAX_ROWS = 1_000_000     # bigger results are parquet only (a CSV that size won't open in Excel anyway)
 
 
-def save_run_params(settings, pipeline, country, deployment, params) -> Path:
-    p = deployment_dir(settings, pipeline, country, deployment) / "run_params.json"
+def paths(settings: Settings, pipeline: Pipeline, place: str, deployment: str) -> layout.RunPaths:
+    return layout.run_paths(settings, pipeline.name, place, deployment)
+
+
+def deployment_dir(settings: Settings, pipeline: Pipeline, place: str, deployment: str) -> Path:
+    """The folder a deployment's results are in."""
+    return paths(settings, pipeline, place, deployment).root
+
+
+def save_run_params(settings, pipeline, place, deployment, params) -> Path:
+    p = paths(settings, pipeline, place, deployment).params
     write_json(p, {"saved_at": now_utc(), "pipeline": pipeline.name, "params": params})
     return p
 
 
-def load_run_params(settings, pipeline, country, deployment) -> dict:
-    p = deployment_dir(settings, pipeline, country, deployment) / "run_params.json"
+def load_run_params(settings, pipeline, place, deployment) -> dict:
+    p = paths(settings, pipeline, place, deployment).params
     return json.loads(p.read_text())["params"] if p.exists() else pipeline.params()
 
 
@@ -53,9 +62,11 @@ def run_chunk(settings: Settings, pipeline: Pipeline, chunk_json: Path, params: 
               keep_temp: bool = False, force: bool = False) -> dict:
     chunk = read_chunk(chunk_json)
     country, dep, idx = chunk["country_folder"], chunk["deployment_id"], int(chunk["chunk_index"])
-    params = params or load_run_params(settings, pipeline, country, dep)
+    place = chunk.get("project") or country
+    params = params or load_run_params(settings, pipeline, place, dep)
     run_id = f"{dep}_chunk_{idx:05d}"
-    out = deployment_dir(settings, pipeline, country, dep) / "chunks"
+    rp = paths(settings, pipeline, place, dep)
+    out = rp.chunks
     out.mkdir(parents=True, exist_ok=True)
     summary_path = out / f"{run_id}_summary.json"
     if summary_path.exists() and not force:
@@ -65,7 +76,7 @@ def run_chunk(settings: Settings, pipeline: Pipeline, chunk_json: Path, params: 
             return prev
 
     pipeline.check_installed()
-    stage = settings.tmp_root / pipeline.name / country / dep / run_id
+    stage = settings.tmp_root / pipeline.name / place / dep / run_id
     summary = {"status": "running", "started_at": now_utc(), "chunk_json": str(chunk_json),
                "country_folder": country, "deployment_id": dep, "chunk_index": idx,
                "n_files_expected": len(chunk["keys"])}
@@ -134,6 +145,7 @@ def run_chunk(settings: Settings, pipeline: Pipeline, chunk_json: Path, params: 
         raise
     finally:
         write_json(summary_path, summary)
+        progress.write_progress_file(rp, pipeline.name, place, dep)
         if not keep_temp and stage.exists():
             shutil.rmtree(stage, ignore_errors=True)
     print(f"{run_id}: {summary['status']} - {summary.get('n_detections', 0)} detections, "
@@ -142,10 +154,13 @@ def run_chunk(settings: Settings, pipeline: Pipeline, chunk_json: Path, params: 
 
 
 def combine(settings: Settings, pipeline: Pipeline, country: str, deployment: str) -> dict:
-    ddir = deployment_dir(settings, pipeline, country, deployment)
-    cdir = ddir / "chunks"
-    base = settings.pipeline_dir(pipeline.name, country)
-    manifest = json.loads(manifest_path(base, deployment).read_text())
+    """Join a deployment's chunks into its results files. `country` is the project (place) folder."""
+    rp = paths(settings, pipeline, country, deployment)
+    ddir, cdir = rp.root, rp.chunks
+    if not rp.manifest.exists():
+        raise SystemExit(f"No run of {pipeline.name} for {deployment} in {rp.root.parent}. "
+                         f"`cehbio status` lists every run.")
+    manifest = json.loads(rp.manifest.read_text())
     summaries = {p.name.replace("_summary.json", ""): json.loads(p.read_text()) for p in cdir.glob("*_summary.json")}
     complete = [k for k, v in summaries.items() if v.get("status") == "complete"]
     expected = [f"{deployment}_chunk_{i:05d}" for i in range(1, manifest["n_chunks"] + 1)]
@@ -155,6 +170,11 @@ def combine(settings: Settings, pipeline: Pipeline, country: str, deployment: st
     det_parts = [pd.read_parquet(cdir / f"{c}_{name}.parquet") for c in expected if c in complete]
     det = pd.concat(det_parts, ignore_index=True) if det_parts else pd.DataFrame()
     det.to_parquet(ddir / f"{deployment}_{name}.parquet", index=False)
+    csv = ddir / f"{deployment}_{name}.csv"
+    if len(det) <= CSV_MAX_ROWS:
+        det.to_csv(csv, index=False)
+    elif csv.exists():
+        csv.unlink()
     def _read(p: Path) -> pd.DataFrame:
         try:
             return pd.read_csv(p)
@@ -177,4 +197,5 @@ def combine(settings: Settings, pipeline: Pipeline, country: str, deployment: st
         qa.update(pipeline.after_combine(ddir, deployment, det, files,
                                          load_run_params(settings, pipeline, country, deployment)) or {})
     write_json(ddir / f"{deployment}_qa.json", qa)
+    progress.write_progress_file(rp, pipeline.name, country, deployment)
     return qa

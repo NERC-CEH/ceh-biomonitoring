@@ -2,7 +2,7 @@
 # Group workspaces are only mounted on sci servers and LOTUS, not on login nodes.
 #
 # Set in ~/.config/ceh-biomonitoring/settings.yml:
-#   outputs_root: /gws/<your-group-workspace>/<you>/ceh-biomonitoring   (home is too small)
+#   outputs_root: /gws/<your-group-workspace>/<you>/ceh-biomonitoring-results   (home is too small)
 #   slurm:
 #     account: <your JASMIN Slurm account>
 detect:

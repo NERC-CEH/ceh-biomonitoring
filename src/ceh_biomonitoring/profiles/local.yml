@@ -1,6 +1,6 @@
 # A laptop or desktop: no Slurm, chunks run one after another.
-outputs_root: ~/ceh-biomonitoring/outputs
-tmp_root: ~/ceh-biomonitoring/tmp
+outputs_root: ~/ceh-biomonitoring-results      # kept apart from the code folder
+tmp_root: ~/.cache/ceh-biomonitoring/tmp
 
 slurm:
   enabled: false

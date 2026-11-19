@@ -78,9 +78,9 @@ def test_run_chunk_and_combine(settings, monkeypatch):
     monkeypatch.setattr(objectstore, "client", lambda s: object())
     monkeypatch.setattr(objectstore, "download", fake_download)
     p = FakePipeline()
-    base = settings.pipeline_dir(p.name, "uk")
+    rp = runner.paths(settings, p, "uk", "dep1")
     keys = ["dep1/x/bird1.wav", "dep1/x/quiet.wav", "dep1/x/broken.wav", "dep1/x/bird2.wav"]
-    paths = chunks.write_chunks(base, COUNTRY, "dep1", keys, 2, "audio_keys", "x")
+    paths = chunks.write_chunks(rp.file_lists, COUNTRY, "dep1", keys, 2, "audio_keys", "x", manifest=rp.manifest)
     runner.save_run_params(settings, p, "uk", "dep1", p.params())
     for c in paths:
         s = runner.run_chunk(settings, p, c)
@@ -94,7 +94,10 @@ def test_run_chunk_and_combine(settings, monkeypatch):
     ddir = runner.deployment_dir(settings, p, "uk", "dep1")
     det = pd.read_parquet(ddir / "dep1_detections.parquet")
     assert set(det["deployment_id"]) == {"dep1"}
-    assert (ddir / "chunks" / "dep1_chunk_00001_keep" / "extra.txt").exists()
+    assert ddir == settings.outputs_root / p.name / "uk" / "dep1"
+    assert (ddir / "working" / "chunks" / "dep1_chunk_00001_keep" / "extra.txt").exists()
+    assert (ddir / "dep1_detections.csv").exists() and (ddir / "PROGRESS.txt").exists()
+    assert "100%" in (ddir / "PROGRESS.txt").read_text() and "finished" in (ddir / "PROGRESS.txt").read_text()
     assert not any((settings.tmp_root).rglob("*.wav")), "temporary downloads are cleaned up"
 
 
@@ -102,8 +105,9 @@ def test_combine_reports_missing_chunks(settings, monkeypatch):
     monkeypatch.setattr(objectstore, "client", lambda s: object())
     monkeypatch.setattr(objectstore, "download", fake_download)
     p = FakePipeline()
-    base = settings.pipeline_dir(p.name, "uk")
-    paths = chunks.write_chunks(base, COUNTRY, "dep2", ["dep2/a/bird.wav", "dep2/a/b.wav"], 1, "audio_keys", "a")
+    rp = runner.paths(settings, p, "uk", "dep2")
+    paths = chunks.write_chunks(rp.file_lists, COUNTRY, "dep2", ["dep2/a/bird.wav", "dep2/a/b.wav"], 1, "audio_keys",
+                                "a", manifest=rp.manifest)
     runner.save_run_params(settings, p, "uk", "dep2", p.params())
     runner.run_chunk(settings, p, paths[0])
     qa = runner.combine(settings, p, "uk", "dep2")
@@ -161,8 +165,9 @@ def test_local_folder_never_touches_originals(settings, tmp_path):
     assert [Path(k).name for k in keys] == ["bird_a.WAV", "quiet.wav"], "case-insensitive, other files ignored"
     p = MovingPipeline()
     local = {"country_name": "local", "country_folder": "local", "bucket_code": "local"}
-    paths = chunks.write_chunks(settings.pipeline_dir(p.name, "local"), local, "site1", keys, 10, "audio_keys",
-                                "local", {"source": "local", "device": "song-meter"})
+    rp = runner.paths(settings, p, "local", "site1")
+    paths = chunks.write_chunks(rp.file_lists, local, "site1", keys, 10, "audio_keys",
+                                "local", {"source": "local", "device": "song-meter"}, manifest=rp.manifest)
     runner.save_run_params(settings, p, "local", "site1", p.params())
     s = runner.run_chunk(settings, p, paths[0])
     assert s["status"] == "complete" and s["n_detections"] == 1
@@ -300,3 +305,121 @@ def test_example_fingerprint_changes_with_files_and_options():
     assert a == examples.fingerprint("birds") and len(a) == 8
     assert a != examples.fingerprint("birds", ["--set", "model=perch"])
     assert a != examples.fingerprint("bats")
+
+
+# ------------------------------------------------------------------ folders, progress, tidy
+def _run_fake(settings, monkeypatch, place="uk", dep="dep1", n=4, per=2, run=None):
+    monkeypatch.setattr(objectstore, "client", lambda s: object())
+    monkeypatch.setattr(objectstore, "download", fake_download)
+    p = FakePipeline()
+    rp = runner.paths(settings, p, place, dep)
+    keys = [f"{dep}/x/bird{i}.wav" for i in range(n)]
+    paths = chunks.write_chunks(rp.file_lists, COUNTRY, dep, keys, per, "audio_keys", "x", manifest=rp.manifest,
+                                extra={"project": place} if place != "uk" else None)
+    runner.save_run_params(settings, p, place, dep, p.params())
+    for c in paths[: run if run is not None else len(paths)]:
+        runner.run_chunk(settings, p, c)
+    return p, rp, paths
+
+
+def test_project_folder_and_progress(settings, monkeypatch):
+    from ceh_biomonitoring import progress
+    p, rp, paths = _run_fake(settings, monkeypatch, place="my-woods", n=6, per=2, run=1)
+    assert rp.root == settings.outputs_root / "fake" / "my-woods" / "dep1"
+    info = progress.run_progress(rp, check_slurm=False)
+    assert (info["n_chunks"], info["complete"], info["files_done"], info["total_files"]) == (3, 1, 2, 6)
+    assert info["state"].startswith("paused") and "33%" in progress.summary_line(info)
+    text = progress.describe(rp, "fake", "my-woods", "dep1", info, " --project my-woods")
+    assert "2 of 6" in text and "cehbio run fake --project my-woods --deployment dep1" in text
+    for c in paths[1:]:
+        runner.run_chunk(settings, p, c)
+    runner.combine(settings, p, "my-woods", "dep1")
+    info = progress.run_progress(rp, check_slurm=False)
+    assert info["state"] == "finished" and progress.summary_line(info).startswith("[" + "#" * progress.BAR)
+
+
+def test_interrupted_local_run_is_flagged(settings, monkeypatch):
+    from ceh_biomonitoring import progress
+    p, rp, paths = _run_fake(settings, monkeypatch, run=0)
+    f = rp.chunks / "dep1_chunk_00001_summary.json"
+    chunks.write_json(f, {"status": "running", "started_at": "2026-01-01T00:00:00+00:00", "n_files_expected": 2})
+    os.utime(f, (0, 0))
+    info = progress.run_progress(rp, check_slurm=False)
+    assert info["state"].startswith("stopped") and "interrupted" in info["stopped"][0][1]
+
+
+def test_status_lists_every_run(settings, monkeypatch, capsys):
+    from ceh_biomonitoring import cli
+    _run_fake(settings, monkeypatch)
+    _run_fake(settings, monkeypatch, place="my-woods", dep="wood-2", run=1)
+    monkeypatch.setattr(cli, "_settings", lambda a: settings)
+    cli.main(["status"])
+    out = capsys.readouterr().out
+    assert "fake / uk / dep1" in out and "fake / my-woods / wood-2" in out and "50%" in out
+    cli.main(["status", "--deployment", "wood-2"])
+    out = capsys.readouterr().out
+    assert "Files done        : 2 of 4" in out and "Results folder" in out
+
+
+def _old_layout_run(settings, dep="old1"):
+    """A run as the toolkit made it before November 2026."""
+    base = settings.outputs_root / "fake" / "uk"
+    keys = [f"{dep}/x/bird.wav", f"{dep}/x/quiet.wav"]
+    chunks.write_chunks(base / "keys" / "chunks" / dep, COUNTRY, dep, keys, 2, "audio_keys", "x",
+                        manifest=base / "keys" / "manifests" / dep / "manifest.json")
+    root = base / "inference" / dep
+    chunks.write_json(root / "chunks" / f"{dep}_chunk_00001_summary.json",
+                      {"status": "complete", "n_files_expected": 2, "n_detections": 1,
+                       "started_at": "2026-01-01T00:00:00+00:00", "finished_at": "2026-01-01T00:05:00+00:00"})
+    pd.DataFrame({"source_key": [keys[0]]}).to_parquet(root / f"{dep}_detections.parquet")
+    chunks.write_json(root / f"{dep}_qa.json", {"complete": True})
+    chunks.write_json(root / "run_params.json", {"params": {"threshold": 0.7}})
+    (root / "my_own_notes.txt").write_text("mine")
+    return root
+
+
+def test_old_layout_still_found(settings):
+    root = _old_layout_run(settings)
+    p = FakePipeline()
+    rp = runner.paths(settings, p, "uk", "old1")
+    assert rp.legacy and rp.root == root
+    assert runner.load_run_params(settings, p, "uk", "old1") == {"threshold": 0.7}
+    from ceh_biomonitoring import layout, progress
+    assert [r[:3] for r in layout.all_runs(settings.outputs_root)] == [("fake", "uk", "old1")]
+    assert progress.run_progress(rp, check_slurm=False)["state"] == "finished"
+
+
+def test_tidy_moves_old_runs_only_when_asked(settings, monkeypatch, capsys):
+    from ceh_biomonitoring import tidy
+    root = _old_layout_run(settings)
+    monkeypatch.setattr("builtins.input", lambda q: "n")
+    tidy.tidy(settings)
+    assert root.exists() and "Nothing moved" in capsys.readouterr().out
+    tidy.tidy(settings, yes=True)
+    new = settings.outputs_root / "fake" / "uk" / "old1"
+    assert not (settings.outputs_root / "fake" / "uk" / "inference").exists()
+    assert not (settings.outputs_root / "fake" / "uk" / "keys").exists()
+    assert (new / "old1_detections.parquet").exists() and (new / "my_own_notes.txt").read_text() == "mine"
+    assert (new / "working" / "file_lists" / "manifest.json").exists()
+    assert (new / "working" / "file_lists" / "old1_chunk_00001.json").exists()
+    assert (new / "working" / "run_params.json").exists() and (new / "PROGRESS.txt").exists()
+    rp = runner.paths(settings, FakePipeline(), "uk", "old1")
+    assert not rp.legacy and runner.load_run_params(settings, FakePipeline(), "uk", "old1") == {"threshold": 0.7}
+    tidy.tidy(settings, yes=True)
+    assert "Nothing to tidy" in capsys.readouterr().out
+
+
+def test_old_default_results_folder_still_used(tmp_path, monkeypatch):
+    monkeypatch.setenv("CEHBIO_CONFIG_DIR", str(tmp_path / "cfg"))
+    monkeypatch.setenv("HOME", str(tmp_path))
+    monkeypatch.setenv("USERPROFILE", str(tmp_path))
+    s = Settings.load(profile="local", settings_file=tmp_path / "none.yml")
+    assert s.outputs_root == tmp_path / "ceh-biomonitoring-results" and not s.get("_old_default")
+    (tmp_path / "ceh-biomonitoring" / "outputs" / "bats").mkdir(parents=True)
+    s = Settings.load(profile="local", settings_file=tmp_path / "none.yml")
+    assert s.outputs_root == tmp_path / "ceh-biomonitoring" / "outputs" and s.get("_old_default")
+
+
+def test_reserved_deployment_names(settings):
+    with pytest.raises(SystemExit, match="toolkit's own folders"):
+        runner.paths(settings, FakePipeline(), "uk", "working")

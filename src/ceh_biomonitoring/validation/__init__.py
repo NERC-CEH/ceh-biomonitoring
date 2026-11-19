@@ -15,6 +15,13 @@ and reading their answers back. Works the same for birds, bats and images, on an
               cehbio validate collect sel/sg_sites.csv to_experts/ --out answers/sg_sites.csv
 
 Add --slurm to sample or prepare to run it as a batch job on a cluster (JASMIN, Polar, ...).
+
+The easy way: give every step the same --project, and the files go in your results folder under
+labelling/<birds|bats|images>/<project>/, in 1_sample/, 2_for_experts/ and 3_answers/. Each step then uses
+the newest file from the step before, so you don't need to type paths:
+              cehbio validate sample images --for all results/dep000123 --project farm1
+              cehbio validate prepare --project farm1
+              cehbio validate collect --project farm1     (returned packages go in 3_answers/returned/)
 """
 from __future__ import annotations
 
@@ -33,12 +40,39 @@ def _slurm(a, step: str, gpu: bool) -> bool:
         return False
     from ..settings import Settings
     from .. import slurm
+    from .. import progress
     s = Settings.load(getattr(a, "profile", None))
     argv = [x for x in sys.argv[1:] if x != "--slurm"]
+    if "--out" not in argv:
+        argv += ["--out", str(a.out)]
     name = f"validate_{step}_{Path(a.out).stem}"
-    script = slurm.write_command_job(s, name, argv, Path(a.out).resolve().parent / "slurm", use_gpu=gpu)
-    print(f"Job script: {script}\nSubmitted: job {slurm.submit(script)}")
+    jobs = (a.project_dir / "working" / "jobs") if getattr(a, "project_dir", None) else \
+        Path(a.out).resolve().parent / "slurm"
+    script = slurm.write_command_job(s, name, argv, jobs, use_gpu=gpu)
+    job = slurm.submit(script)
+    progress.register_job(s, job, f"labelling: {step} {Path(a.out).name}", jobs / "logs", out=str(a.out))
+    print(f"Sent to the cluster as job {job}.\nHow far has it got?  cehbio status     (logs: {jobs / 'logs'})")
     return True
+
+
+def _project(a, group: str | None = None, create: bool = False) -> Path | None:
+    """With --project: the labelling project's folder (made, with its READ ME, when `create`)."""
+    if not getattr(a, "project", None):
+        return None
+    from ..settings import Settings
+    from .. import layout
+    s = Settings.load(getattr(a, "profile", None))
+    if create:
+        folder = layout.labelling_dir(s, group, a.project)
+        layout.readme_labelling(folder, group, a.project)
+    else:
+        folder = layout.find_labelling_project(s, a.project, group)
+    a.project_dir = folder
+    return folder
+
+
+def _need(what: str) -> None:
+    raise SystemExit(f"Give {what}, or --project <name> to use the labelling project's folders.")
 
 
 def _warm_species_cache(a) -> None:
@@ -74,7 +108,8 @@ def add_command(sub, common) -> None:
     s.add_argument("inputs", nargs="+", help="results folders (from cehbio run) or their .parquet files, "
                                             "any number of deployments")
     s.add_argument("--for", dest="purpose", required=True, choices=PURPOSES)
-    s.add_argument("--out", required=True, help="file name for the selection (.csv, plus _record.json)")
+    s.add_argument("--project", help="a name for this labelling project: the selection goes in its 1_sample/ folder")
+    s.add_argument("--out", help="file name for the selection (.csv, plus _record.json), if not using --project")
     s.add_argument("--per-species", type=int,
                    help="site-lists: per species per site (birds, bats 2; images 3); model: per species per "
                         "country (birds, bats 50; images 100)")
@@ -100,6 +135,12 @@ def add_command(sub, common) -> None:
     s.add_argument("--slurm", action="store_true", help="run as a batch job on this machine's cluster")
 
     def run_sample(a):
+        from datetime import date
+        folder = _project(a, a.group, create=True)
+        if not a.out:
+            if not folder:
+                _need("--out")
+            a.out = str(folder / "1_sample" / f"{a.purpose}_{date.today():%Y-%m-%d}")
         if _slurm(a, "sample", gpu=False):
             return
         from ..settings import Settings
@@ -132,7 +173,8 @@ def add_command(sub, common) -> None:
             main = d[~d["reserve"].fillna(False).astype(bool)] if len(d) else d
             print(f"{len(main)} units ({len(d) - len(main)} spare), {main['species'].nunique() if len(main) else 0} "
                   f"species, {main['site'].nunique() if len(main) else 0} sites -> {f}")
-            print(f"Next: cehbio validate prepare {f} --platform {DEFAULT_FOR[a.group]} --out <folder>")
+            print(f"Next: cehbio validate prepare --project {a.project}" if a.project else
+                  f"Next: cehbio validate prepare {f} --platform {DEFAULT_FOR[a.group]} --out <folder>")
     s.set_defaults(func=run_sample)
 
     # ------------------------------------------------------------------ prepare
@@ -140,9 +182,11 @@ def add_command(sub, common) -> None:
     q = vsub.add_parser("prepare", parents=[common], help="package a selection for a labelling platform",
                         description=import_module(".platforms", __name__).__doc__,
                         formatter_class=argparse.RawDescriptionHelpFormatter)
-    q.add_argument("selection", help="a selection CSV from cehbio validate sample")
+    q.add_argument("selection", nargs="?", help="a selection CSV from cehbio validate sample "
+                                                "(with --project: the newest in 1_sample/)")
+    q.add_argument("--project", help="the labelling project: packages go in its 2_for_experts/ folder")
     q.add_argument("--platform", choices=list(PLATFORMS), help="default: audio-clips (birds, bats), mothbot (images)")
-    q.add_argument("--out", required=True, help="folder for the package(s)")
+    q.add_argument("--out", help="folder for the package(s), if not using --project")
     q.add_argument("--bucket", help="object-store bucket the recordings or photos are in, if the results don't say")
     q.add_argument("--source-root", help="a folder holding the recordings or photos (searched by file name)")
     q.add_argument("--blind", dest="blind", action="store_true", default=None,
@@ -172,8 +216,26 @@ def add_command(sub, common) -> None:
     q.add_argument("--keep-unzipped", action="store_true", help="mothbot: keep the package folder as well as the .zip")
     q.add_argument("--slurm", action="store_true", help="run as a batch job (on a GPU if the machine has one)")
 
+    def _selection(a, folder):
+        from .. import layout
+        if a.selection:
+            return
+        if not folder:
+            _need("the selection CSV")
+        f = layout.newest(folder / "1_sample", "*.csv")
+        if not f:
+            raise SystemExit(f"No selection in {folder / '1_sample'} yet: run `cehbio validate sample` first.")
+        a.selection = str(f)
+        print(f"Using the newest selection: {f}", flush=True)
+
     def run_prepare(a):
         import pandas as pd
+        folder = _project(a)
+        _selection(a, folder)
+        if not a.out:
+            if not folder:
+                _need("--out")
+            a.out = str(folder / "2_for_experts" / Path(a.selection).stem)
         if getattr(a, "slurm", False) and not a.no_species_list and not a.offline:
             _warm_species_cache(a)                         # compute nodes may have no internet
         if _slurm(a, "prepare", gpu=True):
@@ -196,20 +258,42 @@ def add_command(sub, common) -> None:
                           species_list="none" if a.no_species_list else a.species_list,
                           species_taxon=a.species_taxon, offline=a.offline, clock_timezone=a.clock_timezone)
         print(f"\nDone: {res}")
-        print(f"When the experts are finished: cehbio validate collect {a.selection} {a.out} --out <answers.csv>")
+        print(f"\nThe packages are in {a.out}")
+        if a.project:
+            print(f"When the experts send them back, put them in {a.project_dir / '3_answers' / 'returned'} "
+                  f"and run: cehbio validate collect --project {a.project}")
+        else:
+            print(f"When the experts are finished: cehbio validate collect {a.selection} {a.out} --out <answers.csv>")
     q.set_defaults(func=run_prepare)
 
     # ------------------------------------------------------------------ collect
     c = vsub.add_parser("collect", parents=[common], help="the experts' answers, next to what the model said",
                         description=import_module(".collect", __name__).__doc__,
                         formatter_class=argparse.RawDescriptionHelpFormatter)
-    c.add_argument("selection", help="the selection CSV the packages were made from")
-    c.add_argument("returned", nargs="+", help="Mothbot packages (folders or .zip) or audio sheets sent back")
-    c.add_argument("--out", required=True, help="CSV for the answers")
+    c.add_argument("selection", nargs="?", help="the selection CSV the packages were made from "
+                                                "(with --project: the newest in 1_sample/)")
+    c.add_argument("returned", nargs="*", help="Mothbot packages (folders or .zip) or audio sheets sent back "
+                                               "(with --project: what's in 3_answers/returned/)")
+    c.add_argument("--project", help="the labelling project: answers go in its 3_answers/ folder")
+    c.add_argument("--out", help="CSV for the answers, if not using --project")
 
     def run_collect(a):
         import pandas as pd
         from . import collect as K
+        folder = _project(a)
+        _selection(a, folder)
+        stem = Path(a.selection).stem
+        if not a.returned:
+            if not folder:
+                _need("the packages sent back")
+            back = folder / "3_answers" / "returned"
+            a.returned = [str(x) for x in sorted(back.iterdir())] if back.is_dir() and any(back.iterdir()) \
+                else [str(folder / "2_for_experts" / stem)]
+            print("Reading answers from: " + ", ".join(Path(x).name for x in a.returned), flush=True)
+        if not a.out:
+            if not folder:
+                _need("--out")
+            a.out = str(folder / "3_answers" / f"{stem}_answers.csv")
         sel = pd.read_csv(a.selection, low_memory=False)
         paths = [Path(x) for x in a.returned]
         if all(p.suffix == ".csv" for p in paths):

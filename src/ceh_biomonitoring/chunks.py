@@ -1,8 +1,6 @@
 """Split a deployment's files into chunk JSONs, one per Slurm task.
 
-Layout under <outputs_root>/<pipeline>/<country>/:
-    keys/chunks/<deployment>/<deployment>_chunk_00001.json
-    keys/manifests/<deployment>/manifest.json
+They go in the run's working/file_lists/ folder (see layout.py), with manifest.json beside them.
 Chunk JSONs keep the field names the older scripts used (audio_keys / image_keys),
 so existing chunk files still work.
 """
@@ -22,14 +20,6 @@ def write_json(path: Path, payload: dict) -> None:
     tmp = path.with_suffix(path.suffix + ".tmp")
     tmp.write_text(json.dumps(payload, indent=2))
     tmp.replace(path)
-
-
-def chunk_dir(base: Path, deployment: str) -> Path:
-    return base / "keys" / "chunks" / deployment
-
-
-def manifest_path(base: Path, deployment: str) -> Path:
-    return base / "keys" / "manifests" / deployment / "manifest.json"
 
 
 def pack(groups: list[list[str]], size: int) -> list[list[str]]:
@@ -52,11 +42,12 @@ def pack(groups: list[list[str]], size: int) -> list[list[str]]:
     return chunks_
 
 
-def write_chunks(base: Path, country: dict, deployment: str, keys: list[str], files_per_chunk: int,
+def write_chunks(out: Path, country: dict, deployment: str, keys: list[str], files_per_chunk: int,
                  key_field: str, data_type: str, extra: dict | None = None,
-                 groups: list[list[str]] | None = None) -> list[Path]:
-    out = chunk_dir(base, deployment)
-    if out.exists() and any(out.glob("*.json")):
+                 groups: list[list[str]] | None = None, manifest: Path | None = None) -> list[Path]:
+    """Chunk JSONs in `out`, and the manifest (default out/manifest.json)."""
+    out = Path(out)
+    if out.exists() and any(p for p in out.glob("*.json") if p.name != "manifest.json"):
         raise SystemExit(f"Chunks already exist in {out}. Delete them first if you want to rebuild.")
     if groups is not None:
         parts = pack(groups, files_per_chunk)
@@ -73,7 +64,7 @@ def write_chunks(base: Path, country: dict, deployment: str, keys: list[str], fi
             "chunk_index": i + 1, "n_chunks": n, "n_files": len(part), key_field: part, **(extra or {}),
         })
         paths.append(p)
-    write_json(manifest_path(base, deployment), {
+    write_json(manifest or out / "manifest.json", {
         "created_at": now_utc(), "country_folder": country["country_folder"],
         "bucket_code": country["bucket_code"], "deployment_id": deployment, "data_type": data_type,
         "total_files": len(keys), "files_per_chunk": files_per_chunk, "n_chunks": n,

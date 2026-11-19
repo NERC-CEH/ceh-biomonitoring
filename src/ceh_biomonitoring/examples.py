@@ -100,9 +100,9 @@ def run(pipeline: str, settings, extra: list[str], profile: str | None = None) -
     # each example in its own process: the pipelines' libraries (TensorFlow, numba, torch) each bring
     # their own LLVM, and loading them all into one process crashes
     subprocess.run([sys.executable, "-m", "ceh_biomonitoring", "run", pipeline, "--folder", str(folder),
-                    "--deployment", dep, "--here", *(["--profile", profile] if profile else []),
+                    "--project", "examples", "--deployment", dep, "--here", *(["--profile", profile] if profile else []),
                     *manifest()[pipeline].get("run", []), *extra], check=False)
-    out = runner.deployment_dir(settings, p, "local", dep) / f"{dep}_{p.output_name}.parquet"
+    out = runner.deployment_dir(settings, p, "examples", dep) / f"{dep}_{p.output_name}.parquet"
     det = pd.read_parquet(out) if out.exists() else pd.DataFrame()
     ok, msg = check(pipeline, det, manifest()[pipeline].get("expect", {}))
     print(f"\n{'PASS' if ok else 'PROBLEM'} {pipeline}: {msg}\n    results: {out.parent}")

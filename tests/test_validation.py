@@ -409,3 +409,29 @@ def test_mothbot_reads_16_bit_and_png_photos(tmp_path):
     res = mothbot.prepare(sel, tmp_path / "pk", cluster=False, keep_unzipped=True, round_date="2026-11-18",
                           species_list="none")
     assert res["packages"][0]["crops"] == 2 and res["packages"][0]["failures"] == 0
+
+
+def test_labelling_project_folders_chain_the_steps(tmp_path, monkeypatch, capsys):
+    """--project puts each step in labelling/<group>/<project>/ and each step finds the one before."""
+    from ceh_biomonitoring import cli
+    from ceh_biomonitoring.settings import Settings
+    from ceh_biomonitoring.validation.platforms import audio_clips
+    real = Settings.load
+    monkeypatch.setattr(Settings, "load", classmethod(lambda cls, profile=None, **k: real(
+        profile="local", overrides={"outputs_root": str(tmp_path / "out")}, settings_file=tmp_path / "none.yml")))
+    res = tmp_path / "wood-1"
+    res.mkdir()
+    bird_det().drop(columns="results").to_parquet(res / "wood-1_detections.parquet")
+    cli.main(["validate", "sample", "birds", str(res), "--for", "site-lists", "--project", "woods"])
+    proj = tmp_path / "out" / "labelling" / "birds" / "woods"
+    sel = list((proj / "1_sample").glob("*.csv"))
+    assert len(sel) == 1 and (proj / "READ ME.txt").exists() and (proj / "3_answers" / "returned").is_dir()
+    assert "validate prepare --project woods" in capsys.readouterr().out
+    seen = {}
+    monkeypatch.setattr(audio_clips, "prepare", lambda sel_, out, **k: seen.update(out=out, n=len(sel_)) or {})
+    cli.main(["validate", "prepare", "--project", "woods"])
+    assert seen["out"] == proj / "2_for_experts" / sel[0].stem and seen["n"] > 0
+    with pytest.raises(SystemExit, match="No labelling project 'nope'"):
+        cli.main(["validate", "prepare", "--project", "nope"])
+    with pytest.raises(SystemExit, match="--project"):
+        cli.main(["validate", "prepare"])

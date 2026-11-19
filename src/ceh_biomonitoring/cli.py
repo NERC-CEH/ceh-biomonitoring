@@ -2,11 +2,13 @@
 
   cehbio pipelines                         which pipelines exist, and which are installed
   cehbio check                             settings, credentials and object-store access
-  cehbio run bats --country uk --deployment dep000081
-                                           list files, split into chunks, submit to Slurm
+  cehbio run bats --folder E:/cards/wood-1 --project my-woods --deployment wood-1
+                                           list files, split them into parts, send them to the cluster
                                            (or run them here if this machine has no Slurm)
-  cehbio status bats --country uk --deployment dep000081
-  cehbio combine bats --country uk --deployment dep000081
+  cehbio status                            every run, and how far it has got
+  cehbio status bats --project my-woods --deployment wood-1 --watch
+  cehbio combine bats --project my-woods --deployment wood-1
+  cehbio tidy                              move results made before Nov 2026 into the new folders
 
 Settings for a run go in a YAML file (--config) or on the command line (--set key=value).
 See `cehbio <command> --help` for details.
@@ -25,7 +27,7 @@ import yaml
 
 from importlib import metadata
 
-from . import __version__, chunks, countries, devices, objectstore, pipelines, runner, slurm
+from . import __version__, chunks, countries, devices, layout, objectstore, pipelines, progress, runner, slurm
 from .settings import USER_SETTINGS, Settings
 
 
@@ -92,7 +94,10 @@ def cmd_check(args):
     s = _settings(args)
     print(f"Machine profile : {s.profile}")
     print(f"Settings file   : {USER_SETTINGS} ({'found' if USER_SETTINGS.exists() else 'not used'})")
-    print(f"Outputs         : {s.outputs_root}")
+    print(f"Results folder  : {s.outputs_root}")
+    if s.get("_old_default"):
+        print("  NOTE: this is the old default folder, inside ~/ceh-biomonitoring (where the code often is). "
+              "`cehbio tidy` moves it to ~/ceh-biomonitoring-results.")
     print(f"Temporary files : {s.tmp_root}")
     print(f"Slurm           : {'yes' if s.get('slurm.enabled') else 'no (chunks run on this machine)'}")
     if s.get("slurm.enabled") and not s.get("slurm.account") and s.profile == "jasmin":
@@ -124,7 +129,19 @@ def _where(s, args, need_source: bool = True) -> dict:
     else:
         c = countries.get(s, args.country)
     args.country = c["country_folder"]
+    args.place = getattr(args, "project", None) or c["country_folder"]
     return c
+
+
+def _place_args(args, c) -> str:
+    """The options that find this run again, for the 'next step' hints."""
+    if getattr(args, "project", None):
+        return f" --project {args.project}"
+    if c.get("bucket_code") == "local":
+        return f" --project {args.place}" if args.place != "local" else ""
+    if args.bucket:
+        return f" --bucket {args.bucket}" + (f" --country {args.country}" if args.country != args.bucket else "")
+    return f" --country {args.country}"
 
 
 def list_local(folder: Path, extensions, max_files=None) -> list[str]:
@@ -133,14 +150,16 @@ def list_local(folder: Path, extensions, max_files=None) -> list[str]:
     return files[:max_files] if max_files else files
 
 
-def _make_keys(s, p, country, deployment, args, c, device=None) -> list[Path]:
-    base = s.pipeline_dir(p.name, country)
-    existing = sorted(chunks.chunk_dir(base, deployment).glob("*.json"))
+def _make_keys(s, p, place, deployment, args, c, device=None) -> list[Path]:
+    rp = runner.paths(s, p, place, deployment)
+    existing = sorted(f for f in rp.file_lists.glob("*.json") if f.name != "manifest.json")
     if existing:
-        print(f"Using {len(existing)} existing chunk files in {chunks.chunk_dir(base, deployment)}")
+        print(f"Carrying on with the {len(existing)} parts already listed in {rp.file_lists}")
         return existing
     exts = tuple(device.get("extensions") or p.extensions) if device else p.extensions
     extra = {"device": device["name"]} if device else {}
+    if getattr(args, "project", None):
+        extra["project"] = args.project
     if getattr(args, "timestamp_pattern", None):
         extra["timestamp_pattern"] = args.timestamp_pattern
     sample = None
@@ -172,8 +191,9 @@ def _make_keys(s, p, country, deployment, args, c, device=None) -> list[Path]:
                   f"Give the pattern with --timestamp-pattern, e.g. \"SERIAL-YYYYMMDDThhmmss\".")
     per = args.files_per_chunk or p.files_per_chunk or s.get("chunking.files_per_chunk", 100)
     groups = p.group_files(keys, device, extra.get("timestamp_pattern"))
-    paths = chunks.write_chunks(base, c, deployment, keys, per, p.key_field, data_type, extra, groups=groups)
-    print(f"{len(keys)} files -> {len(paths)} chunks" + (f" ({len(groups)} nights, never split)" if groups else ""))
+    paths = chunks.write_chunks(rp.file_lists, c, deployment, keys, per, p.key_field, data_type, extra,
+                                groups=groups, manifest=rp.manifest)
+    print(f"{len(keys)} files -> {len(paths)} parts" + (f" ({len(groups)} nights, never split)" if groups else ""))
     return paths
 
 
@@ -184,32 +204,60 @@ def cmd_run(args):
     device = _device(p, args)
     params = _params(p, args, device)
     c = _where(s, args)
-    paths = _make_keys(s, p, args.country, args.deployment, args, c, device)
-    runner.save_run_params(s, p, args.country, args.deployment, params)
+    place, dep = args.place, args.deployment
+    rp = runner.paths(s, p, place, dep)
+    if rp.legacy:
+        print(f"(This run is in the old folder layout, {rp.root}. `cehbio tidy` moves it.)")
+    layout.readme_top(s)
+    paths = _make_keys(s, p, place, dep, args, c, device)
+    runner.save_run_params(s, p, place, dep, params)
+    if not rp.legacy:
+        layout.readme_run(rp, p.name, place, dep)
+    where = _place_args(args, c)
     print("Settings:", json.dumps(params))
+    print(f"Results folder: {rp.root}")
     if not s.get("slurm.enabled") or args.here:
-        print(f"Running {len(paths)} chunks on this machine, one after another.")
-        for c in paths:
-            runner.run_chunk(s, p, c, params, keep_temp=args.keep_temp)
-        print(json.dumps(runner.combine(s, p, args.country, args.deployment), indent=2))
+        print(f"Running {len(paths)} parts on this machine, one after another. "
+              f"If it stops, run the same command again: finished parts are kept.\n")
+        for i, chunk in enumerate(paths, 1):
+            runner.run_chunk(s, p, chunk, params, keep_temp=args.keep_temp)
+            print(f"[{i}/{len(paths)}] " + progress.summary_line(progress.run_progress(rp, check_slurm=False)),
+                  flush=True)
+        _finished(runner.combine(s, p, place, dep), rp, dep)
         return
-    job_dir = runner.deployment_dir(s, p, args.country, args.deployment) / "slurm"
     gpu = True if args.gpu else False if args.cpu else None
-    script = slurm.write_job(s, p, args.country, args.deployment, paths, job_dir, use_gpu=gpu)
+    script = slurm.write_job(s, p, place, dep, paths, rp.jobs, use_gpu=gpu)
     if args.dry_run:
         print(f"Job script written (not submitted): {script}\n")
         print(script.read_text())
         return
     job = slurm.submit(script)
-    print(f"Submitted Slurm job {job}: {len(paths)} tasks. Logs: {job_dir / 'logs'}")
-    if c.get("bucket_code") == "local":
-        place = ""
-    elif args.bucket:
-        place = f" --bucket {args.bucket}" + (f" --country {args.country}" if args.country != args.bucket else "")
-    else:
-        place = f" --country {args.country}"
-    print(f"Check progress:  cehbio status {p.name}{place} --deployment {args.deployment}")
-    print(f"When finished:   cehbio combine {p.name}{place} --deployment {args.deployment}")
+    record = {"job_id": job, "submitted_at": chunks.now_utc(), "n_tasks": len(paths), "script": str(script),
+              "logs": str(rp.jobs / "logs")}
+    if not args.no_auto_combine:
+        argv = ["combine", p.name, "--deployment", dep, *where.split()]
+        cscript = slurm.write_command_job(s, f"combine_{p.name}_{dep}", argv, rp.jobs)
+        record["combine_job_id"] = slurm.submit(cscript, after=job)
+    chunks.write_json(rp.jobs / "job.json", record)
+    progress.write_progress_file(rp, p.name, place, dep, where)
+    print(f"Sent to the cluster as job {job}: {len(paths)} parts, up to "
+          f"{(s.get('slurm') or {}).get('max_parallel', 25)} at a time.")
+    if record.get("combine_job_id"):
+        print("The results are joined automatically when the last part finishes.")
+    print(f"\nHow far has it got?   cehbio status {p.name}{where} --deployment {dep}   (add --watch to follow it)")
+    print(f"Or open               {rp.progress_file}")
+    if args.no_auto_combine:
+        print(f"When it has finished: cehbio combine {p.name}{where} --deployment {dep}")
+
+
+def _finished(qa: dict, rp, dep: str) -> None:
+    failed = qa.get("files_by_status", {}).get("failed", 0)
+    print(f"\n{'Finished' if qa.get('complete') else 'NOT finished'}: {qa.get('files_expected', 0):,} files, "
+          f"{qa.get('n_detections', 0):,} detections"
+          + (f"; {failed:,} files couldn't be read (they're listed in {dep}_files.csv)" if failed else ""))
+    print(f"Results: {rp.root}")
+    if not qa.get("complete"):
+        print(f"{len(qa['chunks_missing'])} parts are missing. Run the same `cehbio run` command again to finish them.")
 
 
 def cmd_run_chunk(args):
@@ -218,28 +266,73 @@ def cmd_run_chunk(args):
     runner.run_chunk(s, p, Path(args.chunk_json), keep_temp=args.keep_temp, force=args.force)
 
 
+BUSY = ("running", "waiting", "finished: joining")
+
+
+def _status_once(s, args) -> bool:
+    """Print the status. True when nothing shown is still going (so --watch can stop)."""
+    runs = layout.all_runs(s.outputs_root)
+    if args.pipeline:
+        runs = [r for r in runs if r[0] == args.pipeline]
+    want = args.project or args.country or args.bucket
+    if want:
+        runs = [r for r in runs if r[1] == want]
+    if args.deployment:
+        runs = [r for r in runs if r[2] == args.deployment]
+        if not runs:
+            print(f"No run called {args.deployment} in {s.outputs_root}. `cehbio status` lists every run.")
+            return True
+        if len(runs) == 1:
+            pipe, place, dep, rp = runs[0]
+            info = progress.run_progress(rp)
+            print(progress.describe(rp, pipe, place, dep, info, f" --project {place}"))
+            return not info["state"].startswith(BUSY)
+    busy = False
+    if not runs:
+        print(f"No runs yet in {s.outputs_root}")
+    else:
+        print(f"Runs in {s.outputs_root}\n")
+        names = [f"{r[0]} / {r[1]} / {r[2]}" for r in runs]
+        w = max(map(len, names))
+        for name, (pipe, place, dep, rp) in zip(names, runs):
+            info = progress.run_progress(rp)
+            busy |= info["state"].startswith(BUSY)
+            print(f"  {name:{w}s}  {progress.summary_line(info)}" + ("   (old layout)" if rp.legacy else ""))
+        print("\nOne run in detail: cehbio status <pipeline> --project <project> --deployment <deployment>")
+    jobs = progress.other_jobs(s)
+    if jobs:
+        print("\nOther jobs (last 14 days):")
+        for j in jobs:
+            busy |= j["state"].startswith(BUSY)
+            print(f"  job {j['job_id']:>9s}  {j['what']:50s} {j['state']}\n  {'':13s} logs: {j['logs']}")
+    return not busy
+
+
 def cmd_status(args):
+    import time
     s = _settings(args)
-    p = pipelines.get(args.pipeline)
-    _where(s, args, need_source=False)
-    d = runner.deployment_dir(s, p, args.country, args.deployment) / "chunks"
-    m = chunks.manifest_path(s.pipeline_dir(p.name, args.country), args.deployment)
-    n = json.loads(m.read_text())["n_chunks"] if m.exists() else "?"
-    states: dict = {}
-    for f in d.glob("*_summary.json"):
-        st = json.loads(f.read_text()).get("status", "?")
-        states[st] = states.get(st, 0) + 1
-    done = ", ".join(f"{k} {v}" for k, v in sorted(states.items())) or "none started yet"
-    print(f"{p.name} {args.country} {args.deployment}: {n} chunks; {done}")
+    if not args.watch:
+        _status_once(s, args)
+        return
+    try:
+        while True:
+            print("\033[2J\033[H", end="")            # clear the screen
+            done = _status_once(s, args)
+            if done:
+                print("\nNothing left running.")
+                return
+            print(f"\n(Checking every {args.watch} s. Ctrl+C stops watching; the jobs carry on.)")
+            time.sleep(args.watch)
+    except KeyboardInterrupt:
+        print()
 
 
 def cmd_combine(args):
     s = _settings(args)
     _where(s, args, need_source=False)
-    qa = runner.combine(s, pipelines.get(args.pipeline), args.country, args.deployment)
-    print(json.dumps(qa, indent=2))
-    if not qa["complete"]:
-        print(f"\nNOT complete: {len(qa['chunks_missing'])} chunks missing. Re-run `cehbio run` to finish them.")
+    p = pipelines.get(args.pipeline)
+    qa = runner.combine(s, p, args.place, args.deployment)
+    _finished(qa, runner.paths(s, p, args.place, args.deployment), args.deployment)
 
 
 def cmd_models(args):
@@ -278,9 +371,11 @@ def build_parser() -> argparse.ArgumentParser:
     dep.add_argument("--country", help="country (needs a country table from a plug-in)")
     dep.add_argument("--bucket", help="an object-store bucket")
     dep.add_argument("--folder", help="files on disk instead of the object store (originals are never changed)")
+    dep.add_argument("--project", help="the folder the results go in, e.g. my-woods-2026 (default: the bucket "
+                                       "or country, or 'local' for files on disk)")
     dep.add_argument("--deployment", required=True, help="deployment ID, e.g. dep000081")
 
-    ap = argparse.ArgumentParser(prog="cehbio", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap =argparse.ArgumentParser(prog="cehbio", description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--version", action="version", version=__version__)
     sub = ap.add_subparsers(dest="cmd", required=True)
 
@@ -322,6 +417,8 @@ def build_parser() -> argparse.ArgumentParser:
     r.add_argument("--gpu", action="store_true", help="force a GPU job")
     r.add_argument("--cpu", action="store_true", help="force a CPU job")
     r.add_argument("--keep-temp", action="store_true", help="keep downloaded files (debugging)")
+    r.add_argument("--no-auto-combine", action="store_true",
+                   help="on a cluster: don't join the results automatically when the last part finishes")
     r.set_defaults(func=cmd_run)
 
     rc = sub.add_parser("run-chunk", parents=[common], help="run one chunk (used inside Slurm jobs)")
@@ -354,7 +451,19 @@ def build_parser() -> argparse.ArgumentParser:
     from .validation import add_command as _add_validate
     _add_validate(sub, common)
 
-    sub.add_parser("status", parents=[common, dep], help="progress of a deployment").set_defaults(func=cmd_status)
+    st = sub.add_parser("status", parents=[common], help="how far your runs have got (all of them, or one)",
+                        description="With nothing else: every run and how far it has got. Name a pipeline, "
+                                    "project or deployment to narrow it down; one deployment shows the details.")
+    st.add_argument("pipeline", nargs="?", help="only this pipeline, e.g. bats")
+    st.add_argument("--project", help="only this project folder")
+    st.add_argument("--bucket", help="only runs from this bucket")
+    st.add_argument("--country", help="only runs for this country")
+    st.add_argument("--deployment", help="one deployment, in detail")
+    st.add_argument("--watch", nargs="?", type=int, const=60, metavar="SECONDS",
+                    help="keep checking (every 60 s, or as given) until nothing is running")
+    st.set_defaults(func=cmd_status)
+    from .tidy import add_command as _add_tidy
+    _add_tidy(sub, common)
     sub.add_parser("combine", parents=[common, dep], help="merge chunk outputs + QA").set_defaults(func=cmd_combine)
 
     # Plug-ins (e.g. the internal repo) add commands via entry-point group "ceh_biomonitoring.commands":

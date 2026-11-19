@@ -2,8 +2,8 @@
 # ~/.config/ceh-biomonitoring/settings.yml override these in that order.
 # "{user}" is replaced with your username, "~" with your home folder.
 
-outputs_root: ~/ceh-biomonitoring/outputs
-tmp_root: ~/ceh-biomonitoring/tmp
+outputs_root: ~/ceh-biomonitoring-results      # kept apart from the code folder
+tmp_root: ~/.cache/ceh-biomonitoring/tmp
 
 credentials_file: ~/.config/ceh-biomonitoring/credentials.json
 

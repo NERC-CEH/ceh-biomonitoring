@@ -49,31 +49,102 @@ Put the pipelines you want in the brackets, e.g. `[birds]`, `[images]`, `[birds,
 
 > **On JASMIN:** install on a sci server (e.g. `ssh sci-vm-04`), not a login node. The installer works around JASMIN's small `/tmp` limit for you.
 
-## Quick start
+## Start here
+
+You type each command into a terminal (on Windows, the **Miniforge Prompt**) after `conda activate ceh-biomonitoring`. No coding is needed.
+
+**1. Check everything is set up.**
 
 ```bash
-cehbio run bats --folder E:/my_recordings --deployment wood-1 --max-files 20
+cehbio check
 ```
 
-This finds bat calls in the first 20 recordings in `E:/my_recordings`. Your original files are never moved, changed or deleted. Remove `--max-files 20` to run on everything.
+This shows where your results will go, and whether anything is missing.
 
-**No data of your own yet?** Try each pipeline on small open example sets (UK birds, UK bats, moth-trap photos):
+**2. Try it on example data** (UK birds, UK bats, moth-trap photos). It says PASS or PROBLEM.
 
 ```bash
-cehbio examples run birds      # or bats, images, all
+cehbio examples run bats        # or birds, images, all
 ```
 
-It says PASS or PROBLEM. See [Example data](examples/README.md) for what's in them and who recorded them.
+**3. Run it on your own data.** Start with 20 files:
 
-Then see:
+```bash
+cehbio run bats --folder E:/my_recordings --project my-woods --deployment wood-1 --max-files 20
+```
 
-- the guide for your pipeline: [birds](docs/birds.md), [bats](docs/bats.md) or [images](docs/images.md)
-- [Recorders and file names](docs/recorders.md): so every result gets its date and time
-- [Running and results](docs/running.md): big jobs, computing clusters, what you get and where it goes
+- `--folder`: where your recordings or photos are. They are never moved, changed or deleted.
+- `--project`: a name for the folder your results go in. Use the same one for every deployment that belongs together.
+- `--deployment`: a name for this recorder or trap at this place.
+
+Remove `--max-files 20` to run on everything.
+
+**4. See how far it has got.**
+
+```bash
+cehbio status                   # every run: a progress bar, and roughly how long is left
+cehbio status --watch           # keep checking until it's finished
+```
+
+**5. Open your results.** They're in your user folder, in `ceh-biomonitoring-results/bats/my-woods/wood-1/`. The `.csv` file opens in Excel, and `READ ME.txt` there says what each file is.
+
+**6. Have the results checked by experts.** See [Manual validation](docs/validation.md).
+
+## Your results folder
+
+Each kind of result has its own folder, so birds, bats, images and labelling never get mixed up:
+
+```
+ceh-biomonitoring-results/          in your user folder (cehbio check shows where)
+    birds/  bats/  images/          one folder per pipeline
+        my-woods/                   one folder per project
+            wood-1/                 one folder per deployment: results, READ ME.txt, PROGRESS.txt
+                working/            the pipeline's own files: you don't need to open these
+    labelling/                      expert checks, in steps: 1_sample, 2_for_experts, 3_answers
+    examples/   upload_logs/
+```
+
+More in [Running and results](docs/running.md#your-results-folder): what each file holds, choosing another folder, and moving results from before November 2026 (`cehbio tidy`).
+
+## Guides
+
+Read them in this order:
+
+1. [Recorders and file names](docs/recorders.md): so every result gets its date and time
+2. the guide for your pipeline: [Birds](docs/birds.md), [Bats](docs/bats.md) or [Images](docs/images.md)
+3. [Running and results](docs/running.md): big jobs, computing clusters, following a run, where everything goes
+4. [Manual validation](docs/validation.md) and [Sampling methods](docs/sampling-methods.md): expert checks
+5. For sending data to UKCEH: [Setting up your sites](docs/setting-up-sites.md) and the [Upload guide](docs/upload-guide.md)
+
+**Words used in the guides:**
+
+| Word | Meaning |
+|---|---|
+| **pipeline** | one kind of analysis: birds, bats or images |
+| **deployment** | one recorder or trap, at one place, over one period |
+| **project** | a set of deployments that belong together; their results share a folder |
+| **part** (or chunk) | about 100 files, processed together. A cluster runs many parts at once |
+| **cluster** | a group of shared computers, e.g. JASMIN, where long jobs run while you do something else |
+| **bucket** | a folder in an online object store, where data uploaded to UKCEH is kept |
+
+## What's in this repository
+
+You only need the guides. The rest is there for the toolkit itself.
+
+| Folder or file | What it is |
+|---|---|
+| `docs/` | the guides |
+| `examples/` | small open example data sets, with credits |
+| `credentials/` | an *example* credentials file. Your real one goes in `~/.config/ceh-biomonitoring/`, never here |
+| `install.sh`, `environment.yml`, `pyproject.toml` | the installer and what it installs |
+| `src/` | the code |
+| `tests/` | checks that the code still works, for developers |
+
+Your results are never saved in here: they go in your results folder.
 
 ## Models, licences and acknowledgements
 
-This toolkit runs models made by other teams. **Check each model's licence before commercial work**, and please **cite the models you used** if you publish. Every run records the exact model versions it used, with checksums, in `chunks/*_summary.json`.
+This toolkit runs models made by other teams. **Check each model's licence before commercial work**, and please **cite the models you used** if you publish. Every run records the exact model versions it used, with checksums, in `working/chunks/*_summary.json` in its results folder.
 
 | Pipeline | Model (newest, used by default) | Made by | Source | Licence | Commercial use | Please cite |
 |---|---|---|---|---|---|---|

@@ -73,10 +73,10 @@ The ring light sits in a slightly different place in each deployment, so **make 
 
 ```bash
 # 1. a short test run without a mask
-cehbio run images --folder E:/trap_photos --deployment farm1-test --device lepisense --max-files 300
+cehbio run images --folder E:/trap_photos --project farm1 --deployment farm1-test --device lepisense --max-files 300
 
 # 2. let it find the places detected in photo after photo
-cehbio mask suggest --detections ~/ceh-biomonitoring/outputs/images/local/inference/farm1-test/farm1-test_detections.parquet \
+cehbio mask suggest --detections ~/ceh-biomonitoring-results/images/farm1/farm1-test/farm1-test_detections.parquet \
                     --image E:/trap_photos/one_photo.jpg --out masks/farm1.png
 ```
 
@@ -123,7 +123,7 @@ Every crop then gets:
 | `outline_width_px` (`_mm`) | the short side of that rectangle |
 | `outline` | the outline's points, `[[x, y], ...]`, in photo pixels |
 
-These are the usual inputs for length-weight or area-weight equations to estimate biomass. `save_overlays` saves flat-bug's own picture of each photo, with the outlines drawn on, to `chunks/*_keep/overlays/`, so you can check them.
+These are the usual inputs for length-weight or area-weight equations to estimate biomass. `save_overlays` saves flat-bug's own picture of each photo, with the outlines drawn on, to `working/chunks/*_keep/overlays/`, so you can check them.
 
 **`pixels_per_mm`:** photograph a ruler on the sheet with the same camera set-up, and divide a measured distance in pixels by its length in mm.
 
@@ -185,7 +185,7 @@ filters:
 
 ## Results
 
-In `outputs/images/<place>/inference/<deployment>/`:
+In your results folder, under `images/<project>/<deployment>/` (see [Your results folder](running.md#your-results-folder)):
 
 | File | What's in it |
 |---|---|
@@ -193,7 +193,8 @@ In `outputs/images/<place>/inference/<deployment>/`:
 | `<deployment>_tracks.parquet` | one row per track: start and end time, number of photos, and the first crop's classification |
 | `<deployment>_detections.parquet` | the same crops before tracking |
 | `<deployment>_files.csv` | every photo and its status, including photos that couldn't be read |
-| `chunks/*_summary.json` | the exact models (with checksums), settings and package versions used |
+| `PROGRESS.txt` | how far the run has got |
+| `working/chunks/*_summary.json` | the exact models (with checksums), settings and package versions used |
 
 The main columns:
 

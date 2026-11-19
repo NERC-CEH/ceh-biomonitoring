@@ -58,8 +58,10 @@ def write_job(settings: Settings, pipeline: Pipeline, country: str, deployment: 
     return path
 
 
-def submit(script: Path) -> str:
-    res = subprocess.run(["sbatch", "--parsable", str(script)], capture_output=True, text=True)
+def submit(script: Path, after: str | None = None) -> str:
+    """Submit a job script; with `after`, it starts once that job has ended (however it ended)."""
+    extra = [f"--dependency=afterany:{after}"] if after else []
+    res = subprocess.run(["sbatch", "--parsable", *extra, str(script)], capture_output=True, text=True)
     if res.returncode != 0:
         raise SystemExit(f"sbatch failed: {res.stderr.strip()}")
     return res.stdout.strip().split(";")[0]

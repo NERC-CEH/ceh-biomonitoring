@@ -16,6 +16,28 @@ Everything runs on your own computer, JASMIN, Polar or any other cluster. Files 
 pip install -e ".[validation]"        # or ./install.sh validation: Mothbot packages and audio clips
 ```
 
+## The easy way: one project folder
+
+Give each step the same `--project`. Everything then goes in your results folder, one sub-folder per step, and each step finds the newest file from the step before, so there are no paths to type:
+
+```bash
+cehbio validate sample images --for all ~/ceh-biomonitoring-results/images/farm1/dep000123 --project farm1
+cehbio validate prepare --project farm1                # packages for the experts
+#   ... send them, and put what comes back in 3_answers/returned/ ...
+cehbio validate collect --project farm1                # their answers, next to what the model said
+```
+
+```
+ceh-biomonitoring-results/labelling/images/farm1/
+    READ ME.txt
+    1_sample/          what the experts check  (all_2026-11-19.csv, and its _record.json)
+    2_for_experts/     the packages to send them, one folder per selection
+    3_answers/         the answers (all_2026-11-19_answers.csv)
+        returned/      put the packages or sheets the experts send back here
+```
+
+`cehbio status` lists labelling jobs sent to the cluster with `--slurm`. You can still name every file yourself with `--out` and the selection's path, as in the examples below.
+
 ## What gets checked: units
 
 Each group's results are first grouped into **units**, so two picks are never the same animal doing the same thing:

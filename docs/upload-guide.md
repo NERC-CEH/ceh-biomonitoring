@@ -129,7 +129,7 @@ You can close the window when it's finished. Uploading a large deployment can ta
 - **Interrupted?** If your computer goes to sleep, loses its connection or you close the window, just run `cehbio upload` again with the same answers. It carries on where it left off.
 - **Nothing is uploaded twice.** Files already on the UKCEH data store are skipped.
 - **What gets uploaded:** for images, `.jpg` files; for sound, `.wav` files. Other files, very small or empty files (under 10 KB) and the recycle bin are ignored. **Zip files are not uploaded**: unzip them first.
-- **A record of every upload is kept for you.** Every file is logged in a spreadsheet (`.csv`) in the `ceh-biomonitoring\outputs\upload_logs` folder inside your user folder, e.g. `C:\Users\you\ceh-biomonitoring\outputs\upload_logs`. If you contact us about an upload, it helps to attach this log.
+- **A record of every upload is kept for you.** Every file is logged in a spreadsheet (`.csv`) in the `ceh-biomonitoring-results\upload_logs` folder inside your user folder, e.g. `C:\Users\you\ceh-biomonitoring-results\upload_logs` (if you first used the tool before November 2026: `C:\Users\you\ceh-biomonitoring\outputs\upload_logs`). If you contact us about an upload, it helps to attach this log.
 - **Updating the tool:** occasionally we may ask you to update. Run the `pip install ...` command from Part 1, step 3 again, with `conda activate ceh-biomonitoring` first.
 
 ---

@@ -7,7 +7,7 @@ values for existing ones, through the entry-point group "ceh_biomonitoring.profi
 
 Your own settings live in ~/.config/ceh-biomonitoring/settings.yml (optional). Example:
 
-    outputs_root: /gws/<your-group-workspace>/<you>/ceh-biomonitoring
+    outputs_root: /gws/<your-group-workspace>/<you>/ceh-biomonitoring-results
     slurm:
       account: <your-jasmin-slurm-account>
 """
@@ -26,6 +26,9 @@ import yaml
 
 CONFIG_DIR = Path(os.environ.get("CEHBIO_CONFIG_DIR", Path.home() / ".config" / "ceh-biomonitoring"))
 USER_SETTINGS = CONFIG_DIR / "settings.yml"
+# Results used to default to ~/ceh-biomonitoring/outputs, which is also where `git clone` puts the code.
+NEW_DEFAULT_OUTPUTS = "~/ceh-biomonitoring-results"
+OLD_DEFAULT_OUTPUTS = "~/ceh-biomonitoring/outputs"
 
 
 def _profile_dirs() -> list:
@@ -103,7 +106,12 @@ class Settings:
         if path and Path(path).exists():
             merged = _deep_merge(merged, yaml.safe_load(Path(path).read_text()) or {})
         merged = _deep_merge(merged, overrides or {})
-        return cls(profile=name, values=_expand(merged))
+        values = _expand(merged)
+        new, old = (Path(x).expanduser() for x in (NEW_DEFAULT_OUTPUTS, OLD_DEFAULT_OUTPUTS))
+        if (Path(str(values.get("outputs_root", ""))) == new and not new.exists() and old.is_dir()
+                and any(old.iterdir())):
+            values["outputs_root"], values["_old_default"] = str(old), True   # keep finding earlier results
+        return cls(profile=name, values=values)
 
     def get(self, key: str, default: Any = None) -> Any:
         node: Any = self.values
