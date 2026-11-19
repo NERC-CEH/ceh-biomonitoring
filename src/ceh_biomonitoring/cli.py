@@ -86,7 +86,8 @@ def cmd_upload(args):
 def cmd_devices(args):
     print("Devices (use with --device):\n")
     for name, d in sorted(devices.available().items()):
-        mask = "  needs a mask per deployment" if d.get("needs_mask") else ""
+        mask = ("  needs a mask per deployment" if d.get("needs_mask") else
+                "  ring light found in the photos" if (d.get("params") or {}).get("images", {}).get("ring_light") else "")
         print(f"  {name:12s} {d.get('title', '')}\n  {'':12s} [{d.get('media', '?')}]{mask}\n")
 
 
@@ -464,6 +465,8 @@ def build_parser() -> argparse.ArgumentParser:
     st.set_defaults(func=cmd_status)
     from .tidy import add_command as _add_tidy
     _add_tidy(sub, common)
+    from .clockcheck import add_command as _add_clock
+    _add_clock(sub, common)
     sub.add_parser("combine", parents=[common, dep], help="merge chunk outputs + QA").set_defaults(func=cmd_combine)
 
     # Plug-ins (e.g. the internal repo) add commands via entry-point group "ceh_biomonitoring.commands":

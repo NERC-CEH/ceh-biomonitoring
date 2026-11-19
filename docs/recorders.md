@@ -44,7 +44,31 @@ Anything else, such as `_`, `-` or `T`, must match exactly.
 
 The time in a file name is whatever the recorder's clock said. Some recorders are set to local time, some to UTC (AudioMoth uses UTC unless set otherwise), and some to the time zone of wherever they were set up. This belongs to each **deployment**, not to the type of recorder, so note it down when you deploy. `cehbio` reports times exactly as they are in the file names and does not convert them.
 
-**A quick check:** light traps usually start around dusk. If a trap's first image each night is hours away from local dusk, its clock is probably on UTC or another time zone.
+### Checking a light trap's clock
+
+Light traps start around dusk and stop around dawn. `cehbio clock-check` compares each night's first and last photo with civil dusk and dawn at the site, and says what the clock was keeping:
+
+```bash
+cehbio clock-check --folder E:/trap_photos --lat 51.60 --lon -1.12 --timezone Europe/London
+cehbio clock-check --bucket gbr --deployment dep000123 --device lepisense --lat 51.60 --lon -1.12 --timezone Europe/London
+cehbio clock-check --results ~/ceh-biomonitoring-results/images/farm1/dep000123 --lat 51.60 --lon -1.12
+```
+
+| It says | Meaning |
+|---|---|
+| the clock keeps UTC | the first photos keep step with dusk in UTC |
+| the clock keeps local time | they keep step with dusk in local time, jumping an hour when the clocks change |
+| the clock is about UTC+8 | neither: it was probably set up in another country, or set wrongly |
+| can't tell which clock | the photos follow dusk, but UTC and local time fit equally well. This happens when the nights don't cross a change of the clocks. It says what each would mean; check one photo against a known time, such as when the unit was switched on |
+| doesn't follow dusk | the trap probably runs on a fixed schedule, so its clock can't be told this way |
+
+It also lists:
+
+- nights the clock seems to **jump**;
+- nights the unit **stopped well before its usual time** (a flat battery or a full memory card, worth checking against your field notes);
+- photos that **weren't a night's trapping**, such as set-up tests in daylight.
+
+`--out nights.csv` writes the table, night by night. It never changes any times. Write what you find down with the deployment, e.g. as `--clock-timezone UTC` when making Mothbot packages.
 
 ## Your own recorder
 

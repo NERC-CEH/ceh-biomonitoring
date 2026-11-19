@@ -17,6 +17,7 @@ The processing follows amber-inferences (AMI-system, MIT licence), so results ma
 """
 from __future__ import annotations
 
+import json
 import os
 from datetime import datetime, time, timedelta
 from pathlib import Path
@@ -129,6 +130,9 @@ class Images(Pipeline):
         "mask": "",                    # black-and-white image: black = ignore (see cehbio mask)
         "mask_overlap": 0.5,           # ignore a box when this much of it is in the black area
         "mask_site": "",               # for a masks.json with several sites: which one (default: by folder)
+        "ring_light": "",              # auto = find the ring light in each night's photos (LepiSense, AMI-mini),
+                                       # or a <deployment>_ring_light.json to use; "" = off (see ringlight.py)
+        "ring_light_action": "remove", # remove boxes on the ring, or flag them (kept, with masked_as)
         "filters": "",                 # YAML file(s) of your own rules (see docs/images.md)
         "save_crops": False,           # also save each crop as a .jpg
         "save_outlines": False,        # each insect's outline + area, length, width (for biomass)
@@ -204,6 +208,49 @@ class Images(Pipeline):
         Images._loaded = loaded
         return loaded
 
+    # ---------------------------------------------------------------- the ring light, night by night
+    @staticmethod
+    def _ring_lights(params, ordered, device_profile, pattern):
+        """(rings by night, preview tiles, best box counts, nights to preview) for this part's photos."""
+        import numpy as np
+        from . import ringlight as RL
+        spec = str(params.get("ring_light") or "").strip()
+        if not spec:
+            return {}, {}, {}, set()
+        by_night: dict = {}
+        for key, path in ordered:
+            by_night.setdefault(recording_session(image_datetime(key, device_profile, pattern)), []).append(path)
+        nights = sorted(by_night)
+        if spec.lower() == "auto":
+            rings = {}
+            for n, paths in by_night.items():
+                pick = [paths[i] for i in np.linspace(0, len(paths) - 1, min(RL.PHOTOS_PER_NIGHT, len(paths)))
+                        .round().astype(int)]
+                ims = []
+                for p in dict.fromkeys(pick):
+                    try:
+                        ims.append(open_photo(p)[0])
+                    except Exception:  # noqa: BLE001 - an unreadable photo just isn't used
+                        pass
+                r = RL.night_ring(ims)
+                if r:
+                    rings[n] = r
+            n_found = len(rings)
+            rings = RL.fill(rings, nights)
+            print(f"Ring light: found in the photos on {n_found} of {len(nights)} nights"
+                  + ("" if n_found == len(nights) else "; the others use the nearest night's")
+                  + ("" if rings else ". Not found at all here: nothing is masked for these nights"), flush=True)
+        else:
+            rings = RL.load(spec)
+            print(f"Ring light: from {spec}", flush=True)
+        preview, last = set(), None                   # the first night, and each night the ring moved
+        for n in nights:
+            r = RL.for_night(rings, n)
+            if r and (last is None or abs(r["x"] - last["x"]) + abs(r["y"] - last["y"]) > 0.13 * r["r"]):
+                preview.add(n)
+                last = r
+        return rings, {}, {}, preview
+
     # ---------------------------------------------------------------- one chunk
     def process(self, files, chunk, params, workdir):
         import cv2
@@ -213,6 +260,7 @@ class Images(Pipeline):
 
         from . import filters as F
         from . import nets, outline, tracking
+        from . import ringlight as RL
         from ... import devices
 
         print(NOTICE, flush=True)
@@ -254,6 +302,8 @@ class Images(Pipeline):
 
         ordered = sorted(files, key=lambda kp: (image_datetime(kp[0], device_profile, pattern) or datetime.max,
                                                 Path(kp[0]).name))
+        rings, ring_tiles, ring_best, preview_nights = self._ring_lights(params, ordered, device_profile, pattern)
+        ring_flag = str(params.get("ring_light_action", "remove")) == "flag"
         rows, none, failed = [], [], []
         previous, previous_name = [], None
         if str(dev).startswith("cpu"):
@@ -305,7 +355,8 @@ class Images(Pipeline):
 
             # 1-3: threshold, mask, detection-stage filters, cap
             photo_mask = mask.for_photo(key) if isinstance(mask, F.SiteMasks) else mask
-            kept, n_masked, n_removed = [], 0, 0
+            kept, n_masked, n_removed, n_ring, on_ring = [], 0, 0, 0, []
+            ring = RL.for_night(rings, meta["recording_session"]) if rings else None
             for i, (x0, y0, x1, y1, score, label, poly) in enumerate(boxes):
                 if score < thr:
                     continue
@@ -316,6 +367,13 @@ class Images(Pipeline):
                 if photo_mask is not None and photo_mask.ignored((x0, y0, x1, y1), W, H):
                     n_masked += 1
                     continue
+                on = RL.part((x0, y0, x1, y1), ring) if ring else None
+                if on:
+                    n_ring += 1
+                    on_ring.append((x0, y0, x1, y1))
+                    if not ring_flag:
+                        continue
+                    crop["masked_as"] = on
                 remove, names = F.apply(rules, "detection", crop, W, H)
                 if remove:
                     n_removed += 1
@@ -326,8 +384,16 @@ class Images(Pipeline):
             if n_over:
                 keep_idx = sorted(sorted(range(len(kept)), key=lambda j: -kept[j]["box_score"])[:cap])
                 kept = [kept[j] for j in keep_idx]
-            counts = {"n_boxes_detected": len(boxes), "n_boxes_masked": n_masked,
+            counts = {"n_boxes_detected": len(boxes), "n_boxes_masked": n_masked, "n_boxes_ring_light": n_ring,
                       "n_boxes_removed_by_filters": n_removed, "n_boxes_over_cap": n_over}
+            night = meta["recording_session"]
+            rank = (bool(on_ring), len(boxes))           # a busy photo that shows what's removed
+            if night in preview_nights and rank > ring_best.get(night, (False, -1)):
+                ring_best[night] = rank
+                ring_tiles[night] = RL.tile(image, ring, [(c["x_min"], c["y_min"], c["x_max"], c["y_max"])
+                                                          for c in kept if not c.get("masked_as")], on_ring,
+                                            f"{chunk.get('deployment_id', '')} night {night}: "
+                                            f"{len(on_ring)} on the ring, {len(kept)} kept")
 
             # 4-6: classify in batches
             current = []
@@ -403,7 +469,8 @@ class Images(Pipeline):
                  "crop_status", "crop_bluriness", "crop_area", "cropped_image_path", "box_score", "box_label",
                  "x_min", "y_min", "x_max", "y_max", "class_name", "class_confidence", "order_name",
                  "order_confidence", "order_score", "order_sure"] + species_cols + tracking.MATCH_COLUMNS
-                + ["filters", "n_boxes_detected", "n_boxes_masked", "n_boxes_removed_by_filters", "n_boxes_over_cap"]
+                + ["filters", "n_boxes_detected", "n_boxes_masked", "n_boxes_ring_light", "n_boxes_removed_by_filters",
+                   "n_boxes_over_cap", "photo_repaired"] + (["masked_as"] if ring_flag else [])
                 + (["outline_area_px", "outline_length_px", "outline_width_px"]
                    + (["outline_area_mm2", "outline_length_mm", "outline_width_mm"] if ppm else []) + ["outline"]
                    if want_outlines else []))
@@ -413,7 +480,17 @@ class Images(Pipeline):
                                                                   "enhance_contrast", "detector_precision")},
                 "order_input": params.get("order_input"),
                 "species_list": params.get("species_list") or None,
-                "mask": getattr(mask, "path", None), "n_filters": len(rules), "notice": NOTICE}
+                "mask": getattr(mask, "path", None), "n_filters": len(rules), "notice": NOTICE,
+                "ring_light": params.get("ring_light") or None}
+        if rings:
+            keep = workdir / "keep" / "ring_light"
+            keep.mkdir(parents=True, exist_ok=True)
+            nights_here = {meta_n for meta_n in (recording_session(image_datetime(k, device_profile, pattern))
+                                                 for k, _ in ordered)}
+            (keep / "rings.json").write_text(json.dumps({n: r for n, r in rings.items() if n in nights_here},
+                                                        indent=1))
+            for n, im in ring_tiles.items():
+                im.save(keep / f"{n or 'unknown'}.jpg", quality=80)
         try:
             from importlib.metadata import version
             prov["packages"] = {p: version(p) for p in ("torch", "torchvision", "timm", "flat-bug")}
@@ -438,7 +515,8 @@ class Images(Pipeline):
         ready.to_parquet(ddir / f"{deployment}_analysis_ready.parquet", index=False)
         tracks.to_parquet(ddir / f"{deployment}_tracks.parquet", index=False)
         n_crops = int((ready["crop_status"] != NO_DETECTION).sum())
+        from . import ringlight
         return {"n_crops": n_crops, "n_tracks": int(len(tracks)),
                 "n_single_image_tracks": int(tracks["is_single_image_track"].sum()) if len(tracks) else 0,
                 "outputs": [f"{deployment}_analysis_ready.parquet", f"{deployment}_tracks.parquet"],
-                "notice": NOTICE}
+                **ringlight.after_combine(Path(ddir), deployment), "notice": NOTICE}

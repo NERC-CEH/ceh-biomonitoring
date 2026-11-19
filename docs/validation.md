@@ -95,6 +95,16 @@ cehbio validate prepare sel/barn-1.csv --out to_expert/barn-1
 
 Birds get a 30 s clip centred on the strongest detection (`--clip-seconds`). Bats get the whole pass with 1 s either side (`--pad-seconds`), at the recording's own sample rate, ready for bat software. The spreadsheet says where in the clip the model detected the species. Model samples are **blind**: the expert writes what they hear, and the model's labels go in `model_labels_KEY_do_not_send.csv`.
 
+Each package also has:
+
+| | |
+|---|---|
+| `index.html` | open it in a web browser: every clip with its spectrogram and a player, in the sheet's order, so the expert can work through them and write answers in the sheet |
+| `spectrograms/` | a picture of each clip: time across, frequency up, louder = brighter. Each frequency's background (hiss, a constant hum) is taken out, so calls stand out. Marks along the top show where the model detected something, never what. Bats show 10 to 130 kHz, birds 0 to 12 kHz |
+| `clips_slowed/` | bats: each clip slowed 10 times, so the calls can be heard (40 kHz plays at 4 kHz) |
+
+`--no-spectrograms` leaves these out. Send the whole folder, zipped, so the page finds its pictures and clips.
+
 ## Images: Mothbot packages
 
 ```bash

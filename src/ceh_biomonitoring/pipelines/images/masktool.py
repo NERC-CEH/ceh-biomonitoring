@@ -4,6 +4,9 @@
            light, the camera rig, a label) is almost certainly not an insect
   draw     click around the areas to ignore on one of your photos (needs a screen)
   show     check a mask by laying it over a photo
+  rings    LepiSense / AMI-mini: find the ring light in some photos and show what would be removed.
+           You don't need a mask for these: the images pipeline finds the ring itself, night by night
+           (ring_light: auto, on with --device lepisense). Use this to check it on your photos first
 """
 from __future__ import annotations
 
@@ -108,6 +111,34 @@ def draw(image: Path, out: Path) -> Path:
     return out
 
 
+def rings(images: list[Path], out: Path) -> dict:
+    """Find the ring light in each photo; one preview sheet with the ring and screws drawn on."""
+    from PIL import Image
+    from . import ringlight as RL
+    from . import open_photo
+    files = []
+    for p in map(Path, images):
+        if not p.exists():
+            raise SystemExit(f"Not found: {p}")
+        files += sorted(f for f in p.rglob("*") if f.suffix.lower() in (".jpg", ".jpeg", ".png")) if p.is_dir() else [p]
+    if not files:
+        raise SystemExit("No photos given (.jpg or .png, or a folder of them).")
+    files = [files[i] for i in np.linspace(0, len(files) - 1, min(12, len(files))).round().astype(int)]
+    tiles, found = [], {}
+    for f in dict.fromkeys(files):
+        im = open_photo(f)[0]
+        r = RL.find_ring(im)
+        ring = {"x": round(r[0]), "y": round(r[1]), "r": round(r[2])} if r else None
+        found[f.name] = ring
+        tiles.append(RL.tile(im, ring, [], [], f"{f.name}: " + (f"ring at {ring['x']}, {ring['y']}, radius "
+                                                                 f"{ring['r']}" if ring else "NOT FOUND")))
+    out = Path(out)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    RL.sheet(tiles).save(out, quality=85)
+    return {"preview": str(out), "photos": len(found), "found": sum(1 for v in found.values() if v),
+            "rings": found}
+
+
 def add_command(sub, common) -> None:
     m = sub.add_parser("mask", parents=[common], help="make a mask of areas to ignore (e.g. a ring light)",
                        description=__doc__, formatter_class=__import__("argparse").RawDescriptionHelpFormatter)
@@ -125,8 +156,21 @@ def add_command(sub, common) -> None:
     v.add_argument("--mask", required=True)
     v.add_argument("--image", required=True)
     v.add_argument("--out", required=True, help="preview .jpg to write")
+    g = ms.add_parser("rings", help="LepiSense / AMI-mini: check the ring light is found in your photos")
+    g.add_argument("--image", nargs="+", required=True, help="photos, or a folder of them (up to 12 are used)")
+    g.add_argument("--out", default="ring_light_check.jpg", help="preview sheet to write")
 
     def run(args):
+        if args.mask_cmd == "rings":
+            r = rings(args.image, Path(args.out))
+            for name, ring in r["rings"].items():
+                print(f"  {name}: " + (f"x {ring['x']}, y {ring['y']}, radius {ring['r']}" if ring else "not found"))
+            print(f"Ring light found in {r['found']} of {r['photos']} photos. Look at: {r['preview']}\n"
+                  "(In a run, each night uses the middle of several photos' finds, so a few misses don't matter.)\n"
+                  "Red circles: the ring light and its two screws. Only boxes on the housing, the LED board "
+                  "or a screw are removed;\ninsects elsewhere on the ring are kept. With --device lepisense "
+                  "this is on already (ring_light: auto).")
+            return
         if args.mask_cmd == "suggest":
             r = suggest(Path(args.detections), Path(args.image), Path(args.out), args.min_fraction)
             print(f"Mask: {r['mask']}  ({r['ignored_fraction_of_image']:.1%} of the image ignored, "

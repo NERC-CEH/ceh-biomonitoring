@@ -208,6 +208,8 @@ def add_command(sub, common) -> None:
                    help="mothbot: don't ask GBIF, use only what's cached (compute nodes without internet)")
     q.add_argument("--clip-seconds", type=float, help="audio-clips: clip length (birds 30; bats: the pass)")
     q.add_argument("--pad-seconds", type=float, default=1.0, help="audio-clips, bats: added either side of a pass")
+    q.add_argument("--no-spectrograms", action="store_true",
+                   help="audio-clips: no spectrograms, slowed bat clips or index.html page")
     q.add_argument("--screen", nargs="*", default=[], help="mothbot: reference .npz files of things to leave out "
                                                            "(also the validation.screens setting)")
     q.add_argument("--no-cluster", action="store_true", help="mothbot: don't group similar crops")
@@ -254,7 +256,7 @@ def add_command(sub, common) -> None:
             raise SystemExit(f"{platform} is for {', '.join(mod.GROUPS)}; this selection is {group}")
         res = mod.prepare(sel, Path(a.out), settings=Settings.load(getattr(a, "profile", None)), blind=a.blind,
                           bucket=a.bucket, source_root=a.source_root, clip_seconds=a.clip_seconds,
-                          pad_seconds=a.pad_seconds, screens=a.screen, cluster=not a.no_cluster,
+                          pad_seconds=a.pad_seconds, spectrograms=not a.no_spectrograms, screens=a.screen, cluster=not a.no_cluster,
                           cluster_method=a.cluster_method, min_cluster_size=a.min_cluster_size,
                           one_package=a.one_package, keep_unzipped=a.keep_unzipped,
                           species_list="none" if a.no_species_list else a.species_list,

@@ -50,6 +50,7 @@ validation = [                    # cehbio validate prepare: Mothbot packages, a
     "scikit-learn>=1.3",          # HDBSCAN
     "pillow>=10",
     "soundfile>=0.13",
+    "matplotlib>=3.8",            # spectrograms of audio clips
 ]
 dev = [
     "pytest>=8",

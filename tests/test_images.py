@@ -248,3 +248,58 @@ def test_photos_that_end_early_are_read_and_marked(tmp_path):
         open_photo(junk)
     from ceh_biomonitoring.validation.platforms.mothbot import _open_photo
     assert _open_photo(cut)[0].size == (400, 300)
+
+
+def _board_with_ring(x=1300, y=700, r=316, size=(2592, 1944), fog=False):
+    """A white board with the dark ring housing, its bright LED board inside and two screws."""
+    from PIL import Image, ImageDraw
+    im = Image.new("RGB", size, (150, 150, 150) if fog else (235, 235, 230))
+    d = ImageDraw.Draw(im)
+    dark = (95, 95, 95) if fog else (25, 25, 25)
+    d.ellipse([x - r, y - r, x + r, y + r], fill=dark)
+    d.ellipse([x - 0.5 * r, y - 0.5 * r, x + 0.5 * r, y + 0.5 * r], fill=(250, 250, 250))
+    for sx in (x - 1.2 * r, x + 1.2 * r):
+        d.ellipse([sx - 0.08 * r, y - 0.08 * r, sx + 0.08 * r, y + 0.08 * r], fill=dark)
+    return im
+
+
+def test_ring_light_is_found_in_the_photo():
+    pytest.importorskip("cv2")
+    from ceh_biomonitoring.pipelines.images import ringlight as RL
+    for fog in (False, True):
+        x, y, r = RL.find_ring(_board_with_ring(fog=fog))
+        assert abs(x - 1300) < 30 and abs(y - 700) < 30 and abs(r - 316) < 40, (fog, x, y, r)
+    x, y, r = RL.find_ring(_board_with_ring(x=650, y=480, r=160, size=(1296, 972)))     # smaller photos
+    assert abs(x - 650) < 20 and abs(r - 160) < 25
+    from PIL import Image
+    assert RL.find_ring(Image.new("RGB", (2592, 1944), (200, 200, 200))) is None      # nothing there
+    night = RL.night_ring([_board_with_ring(), _board_with_ring(x=1310), _board_with_ring(x=200, y=1500)])
+    assert night["source"] == "found" and abs(night["x"] - 1305) < 30
+
+
+def test_only_boxes_on_the_ring_are_removed():
+    from ceh_biomonitoring.pipelines.images import ringlight as RL
+    ring = {"x": 1300, "y": 700, "r": 316}
+    assert RL.part((1000, 400, 1600, 1000), ring) == "ring light"         # the housing boxed whole
+    assert RL.part((1280, 680, 1330, 730), ring) == "light board"         # a bit of the LED board
+    assert RL.part((900, 680, 940, 720), ring) == "screw"                 # left screw, 1.2 R away
+    assert RL.part((1100, 980, 1180, 1060), ring) is None                 # a moth on the edge of the ring
+    assert RL.part((100, 100, 200, 200), ring) is None                    # a moth on the board
+    assert RL.part((840, 620, 1000, 780), ring) is None                   # too big for a screw: a moth on it
+    assert RL.part((1280, 680, 1330, 730), None) is None
+    rings = RL.fill({"2026-05-11": {**ring, "source": "found"}}, ["2026-05-11", "2026-05-12", "2026-06-30"])
+    assert rings["2026-06-30"]["source"] == "from 2026-05-11" and rings["2026-05-12"]["x"] == 1300
+
+
+def test_ring_light_is_on_for_lepisense_and_ring_boxes_skip_labelling():
+    from ceh_biomonitoring.validation import units as U
+    assert devices.get("lepisense")["params"]["images"]["ring_light"] == "auto"
+    assert pipelines.get("images").params(devices.pipeline_params(devices.get("lepisense"), "images"))[
+        "ring_light"] == "auto"
+    rows = pd.DataFrame({"image_path": ["a.jpg"] * 3, "deployment_id": ["d"] * 3, "x_min": [1, 1, 1],
+                         "y_min": [1, 1, 1], "x_max": [50, 50, 50], "y_max": [50, 50, 50],
+                         "class_name": ["moth"] * 3, "order_name": ["Lepidoptera"] * 3,
+                         U.SPECIES: ["Noctua pronuba"] * 3, U.SCORE: [0.9] * 3, "track_id": ["t1", "t2", "t3"],
+                         "image_datetime": ["2026-05-11 23:00:00"] * 3,
+                         "masked_as": [None, "screw", None], "masked": [False, False, True]})
+    assert len(U.image_units(rows)) == 1

@@ -445,3 +445,33 @@ def test_mothbot_site_name_is_the_project_not_a_bucket_code():
     assert site_name(rows, override="Farm 1 wood") == "Farm 1 wood"
     old = pd.DataFrame({"results": ["/r/images/gbr/inference/dep000123/x.parquet"], "country_folder": ["gbr"]})
     assert site_name(old) == "gbr"              # no project and no country table: the code is all there is
+
+
+def test_bat_clips_get_spectrograms_slowed_copies_and_a_page(tmp_path):
+    sf = pytest.importorskip("soundfile")
+    pytest.importorskip("matplotlib")
+    from ceh_biomonitoring.validation import spectrogram as SP
+    from ceh_biomonitoring.validation.platforms import audio_clips
+    sr = 384_000
+    t = np.arange(int(sr * 4)) / sr
+    a = np.zeros_like(t, dtype="float32")
+    for c in (1.0, 1.1, 1.2):                                   # three calls sweeping 60 -> 40 kHz
+        on = (t >= c) & (t < c + 0.005)
+        a[on] = 0.5 * np.sin(2 * np.pi * (60_000 - 4e6 * (t[on] - c)) * (t[on] - c))
+    wav = tmp_path / "20260601_220000.wav"
+    sf.write(wav, a, sr)
+    db, f, _ = SP.spectrogram_db(a[int(sr * 1.0): int(sr * 1.005)], sr, 512, 128)
+    assert 35_000 < f[db.mean(axis=1).argmax()] < 65_000          # the energy is where the call is
+    det = pd.DataFrame([{"source_key": str(wav), "filename": wav.name, "start_time": s, "end_time": s + 0.01,
+                         "species_name": "Pipistrellus pipistrellus", "class_probability": 0.8, "deployment_id": "barn-1",
+                         "country_folder": "gbr"} for s in (1.0, 1.1, 1.2)]).assign(results="r")
+    sel = S.site_lists(U.audio_units(det, "bats"), "bats")
+    res = audio_clips.prepare(sel, tmp_path / "out")
+    out = tmp_path / "out"
+    assert len(list((out / "spectrograms").glob("*.png"))) == len(sel) > 0
+    slowed = next((out / "clips_slowed").glob("*.wav"))
+    assert sf.info(str(slowed)).samplerate == sr // 10
+    page = (out / "index.html").read_text()
+    assert res["page"].endswith("index.html") and "slowed" in page and "spectrograms/" in page
+    sheet = pd.read_csv(res["sheet"])
+    assert sheet["spectrogram"].notna().all()

@@ -10,8 +10,9 @@ timestamp:
     - "YYYYMMDDThhmmss"              # anything else with a date-T-time
   # Time zone and clock (local or UTC) depend on how each unit was set up.
   # They belong to the deployment, not the unit: record them with each deployment.
-needs_mask: true                    # the ring light sits in a slightly different place in each deployment
+needs_mask: false                   # the ring light is found in the photos, night by night (ring_light: auto)
 params:
   images:
     box_threshold: 0.2
     max_crops_per_image: 100
+    ring_light: auto                # boxes on the ring light, its LED board and its screws are removed

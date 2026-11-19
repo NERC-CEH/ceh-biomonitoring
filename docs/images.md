@@ -7,7 +7,7 @@ Finds insects in photos from automated light traps, such as **AMI traps** and **
 ## What it does to each photo
 
 1. **Finds insects** with the [flat-bug](https://github.com/darsa-group/flat-bug) detector. Boxes scoring below `box_threshold` are left out.
-2. **Leaves out known clutter**, using your [mask](#masks-ring-lights-and-other-things-always-in-view) (e.g. a ring light) and your [own filters](#your-own-filters-eg-geckos).
+2. **Leaves out known clutter**: the [ring light](#ring-lights-found-for-you-every-night) of LepiSense and AMI-mini units (found in the photos), your [mask](#masks-other-things-always-in-view) and your [own filters](#your-own-filters-eg-geckos).
 3. **Keeps the best boxes**, at most `max_crops_per_image` (default 100) per photo, by detector score. Photos with more, e.g. during a beetle emergence, record how many were left out.
 4. **Moth or not:** `moth-vs-nonmoth-v1`.
 5. **Order:** `insect-order-v1`, 16 groups, e.g. *Lepidoptera Macros*, *Coleoptera*, *Diptera Tipulidae*, *Vegetation*.
@@ -30,12 +30,13 @@ It needs PyTorch. A GPU makes it much faster (on JASMIN it runs on the GPU nodes
 
 ```bash
 cehbio models                               # the models, and which regions have species models
-cehbio run images --folder E:/trap_photos --deployment farm1-2026 --device lepisense --set region=uk --max-files 50
+cehbio run images --folder E:/trap_photos --project farm1 --deployment farm1-2026 --device lepisense --set region=uk --max-files 50
 ```
 
 - `--set region=...`: which species model to use, e.g. `uk`, `thailand`, `costa-rica`, `japan`. Run `cehbio models` for the full list. Without a region you still get detection, moth/non-moth and order.
 - `--device`: `ami-trap` or `lepisense`, so photos get their date and time. See [Recorders and file names](recorders.md).
-- Start with `--max-files 50` to check everything works, and to make a mask (below).
+- Start with `--max-files 50` to check everything works.
+- `--project`: the folder the results go in (see [Running and results](running.md#your-results-folder)).
 
 ### Settings
 
@@ -48,6 +49,8 @@ cehbio run images --folder E:/trap_photos --deployment farm1-2026 --device lepis
 | `top_n` | `5` | species guesses per insect |
 | `species_list` | | a CSV with a `species` column (and optionally `month`, so each photo uses its own month's species), e.g. moths recorded near the site: guesses are chosen only from these (scores stay the model's own) |
 | `species_list_unlikely` | `flag` | species the list marks `unlikely` in a month (a `likelihood` column) can still be guessed; `rank_1_unlikely_this_month` says when the top guess is one. `remove` leaves them out |
+| `ring_light` | `auto` with `--device lepisense`, otherwise off | find the ring light in each night's photos and remove boxes on it (see below); or a `<deployment>_ring_light.json` to use; `""` = off |
+| `ring_light_action` | `remove` | `flag` keeps boxes on the ring, marked in `masked_as` (they're still left out of labelling) |
 | `mask` | | mask image of areas to ignore (see below) |
 | `mask_overlap` | `0.5` | ignore a box when at least this much of it is in the masked area |
 | `filters` | | your filter file(s) (see below) |
@@ -65,11 +68,43 @@ cehbio run images --folder E:/trap_photos --deployment farm1-2026 --device lepis
 | `device` | `auto` | `cuda` (GPU), `cpu` or `auto` |
 | `deployment_name`, `lat`, `lon` | | written into every row, if you give them |
 
-## Masks: ring lights and other things always in view
+## Ring lights: found for you, every night
 
-LepiSense and AMI-mini units have a ring light in the photo, and the detector often mistakes it for insects in every single photo. A **mask** tells the pipeline to ignore those areas. It's a black-and-white image the same shape as your photos: **black = ignore, white = keep**.
+LepiSense and AMI-mini units have a ring light in every photo: a dark housing, a bright LED board inside it, and a screw on each side. The detector keeps boxing them. They also move a little whenever a unit is moved or knocked, so one mask doesn't fit a whole season.
 
-The ring light sits in a slightly different place in each deployment, so **make one mask per deployment**. The easiest way:
+**With `--device lepisense` you don't need to do anything.** For each night, the pipeline:
+
+1. looks at 5 photos spread through the night and finds the ring in each. It works on grey, foggy nights too;
+2. takes the middle of those as the night's ring. A night where it can't be seen uses the nearest night's;
+3. removes only boxes **on the ring**:
+   - the housing boxed whole;
+   - anything centred well inside the ring (parts of the LED board);
+   - small boxes on one of the two screws.
+
+   Insects sitting elsewhere on the ring, or anywhere else, are kept.
+
+**Check it.** Each run writes two files in its results folder:
+
+| File | What's in it |
+|---|---|
+| `<deployment>_ring_light_preview.jpg` | up to 12 nights, with the ring and screws in red, boxes removed in red, boxes kept in green |
+| `<deployment>_ring_light.json` | where the ring was each night, and whether it was found that night or taken from another |
+
+**If a night is wrong,** correct it in the `.json` file. Then run again with `--set ring_light=<that file>`, in a new deployment folder. You can also give one ring for every night: `{"x": 1300, "y": 700, "r": 316}`.
+
+**Try it before a run** on a few of your photos:
+
+```bash
+cehbio mask rings --image E:/trap_photos/night1 --out ring_check.jpg
+```
+
+Every photo records how many boxes were on the ring (`n_boxes_ring_light`). `--set ring_light_action=flag` keeps them instead, marked `ring light`, `light board` or `screw` in the `masked_as` column. Labelling always leaves them out. `--set ring_light=""` switches it off.
+
+The rules were set and checked by eye on the Farm 1 LepiSense units in 2026, where the ring was found directly on 182 of 185 nights. Look at the preview for your own units.
+
+## Masks: other things always in view
+
+Anything else that is in every photo, such as part of the camera rig or a label, can be left out with a **mask**. It's a black-and-white image the same shape as your photos: **black = ignore, white = keep**. Make one per camera set-up. The easiest way:
 
 ```bash
 # 1. a short test run without a mask
@@ -91,7 +126,7 @@ cehbio mask draw --image E:/trap_photos/one_photo.jpg --out masks/farm1.png
 Then use it:
 
 ```bash
-cehbio run images --folder E:/trap_photos --deployment farm1-2026 --device lepisense --set region=uk --set mask=masks/farm1.png
+cehbio run images --folder E:/trap_photos --project farm1 --deployment farm1-2026 --device lepisense --set region=uk --set mask=masks/farm1.png
 ```
 
 **Or describe the mask as circles** in a `.json` file. That's handy for a ring light, whose housing and screws are round:

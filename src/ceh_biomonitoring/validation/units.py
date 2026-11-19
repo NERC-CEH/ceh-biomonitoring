@@ -101,7 +101,7 @@ IMAGE_COLUMNS = {"image_path", "source_key", "image_datetime", "bucket_name", "d
                  "country_folder", "x_min", "y_min", "x_max", "y_max", "crop_area", "box_score", "class_name",
                  "class_confidence", "order_name", "order_confidence", SPECIES, SCORE, "track_id",
                  "rank_1_unlikely_this_month", "latitude", "longitude", "analysis_datetime", "species_model",
-                 *GLOBAL_COLUMNS, *IMAGE_ALIASES}
+                 "masked", "masked_as", *GLOBAL_COLUMNS, *IMAGE_ALIASES}
 REPEATING = {"analysis_datetime", "class_name", "order_name", "species_model", "bucket_name", "deployment_name",
              "country_folder", SPECIES, "top_species_prediction", *GLOBAL_COLUMNS}
 PHOTO_TYPES = {".jpg", ".jpeg", ".png", ".tif", ".tiff", ".heic", ".heif", ".webp", ".bmp"}
@@ -238,6 +238,14 @@ def image_units(df: pd.DataFrame, per_crop: bool = False, min_crop_area: float |
         df = df[df["crop_area"] >= min_crop_area]
     if max_crop_area is not None:
         df = df[df["crop_area"] <= max_crop_area]
+    on_rig = pd.Series(False, index=df.index)
+    if "masked_as" in df.columns:                  # ring light, light board or screw (ring_light_action: flag)
+        on_rig |= df["masked_as"].notna() & df["masked_as"].astype(str).str.strip().ne("")
+    if "masked" in df.columns:
+        on_rig |= df["masked"].map(lambda v: str(v).strip().lower() in ("true", "1", "1.0"))
+    if on_rig.any():
+        print(f"  NOTE: {int(on_rig.sum())} boxes on the ring light or its screws are left out", flush=True)
+        df = df[~on_rig]
     if df.empty:
         return pd.DataFrame(columns=UNIT_COLUMNS)
     path_col = "image_path" if "image_path" in df.columns else "source_key"

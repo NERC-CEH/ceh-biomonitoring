@@ -214,7 +214,7 @@ def test_image_device_timestamps():
     r = devices.parse_filename("site-a/123456789012345-20260806T025318.jpg", lep)
     assert r == {"file_datetime": "2026-08-06 02:53:18", "device_serial": "123456789012345"}
     assert devices.parse_timestamp("ami-mini-20250428T210338_crop_1.jpg", lep) == "2025-04-28 21:03:38"
-    assert lep["needs_mask"] is True and ami["needs_mask"] is False
+    assert lep["needs_mask"] is False and lep["params"]["images"]["ring_light"] == "auto"   # found in the photos
 
 
 def test_status_and_combine_default_to_local_results(settings):
@@ -423,3 +423,58 @@ def test_old_default_results_folder_still_used(tmp_path, monkeypatch):
 def test_reserved_deployment_names(settings):
     with pytest.raises(SystemExit, match="toolkit's own folders"):
         runner.paths(settings, FakePipeline(), "uk", "working")
+
+
+# ------------------------------------------------------------------ clock check
+def _trap_nights(clock, start="2026-03-01", days=90, lat=51.60, lon=-1.12, every_min=20, fixed=False):
+    """Photo times as a trap's clock would write them, starting at civil dusk and stopping at dawn."""
+    from datetime import date, datetime, timedelta, timezone
+    from zoneinfo import ZoneInfo
+    from ceh_biomonitoring.clockcheck import sun_time
+    out, d0 = [], date.fromisoformat(start)
+    for i in range(days):
+        d = d0 + timedelta(days=i)
+        dusk, dawn = sun_time(d, lat, lon, False), sun_time(d + timedelta(days=1), lat, lon, True)
+        if fixed:
+            dusk = datetime(d.year, d.month, d.day, 21, tzinfo=timezone.utc)
+            dawn = dusk + timedelta(hours=8)
+        t = dusk
+        while t <= dawn:
+            if clock == "UTC":
+                c = t
+            elif clock == "local":
+                c = t.astimezone(ZoneInfo("Europe/London"))
+            else:
+                c = t + timedelta(hours=clock)
+            out.append(c.replace(tzinfo=None))
+            t += timedelta(minutes=every_min)
+    return pd.Series(out)
+
+
+def test_sun_times_match_an_almanac():
+    from datetime import date
+    from ceh_biomonitoring.clockcheck import sun_time
+    dusk = sun_time(date(2026, 6, 21), 51.6, -1.1, rising=False)       # Wallingford, midsummer
+    assert dusk.strftime("%H:%M") in {f"21:{m:02d}" for m in range(10, 22)}    # about 21:15 UTC
+    assert sun_time(date(2026, 6, 21), 78.2, 15.6, rising=False) is None      # Svalbard: no dusk
+
+
+def test_clock_check_tells_utc_local_and_wrong_clocks():
+    from ceh_biomonitoring.clockcheck import check
+    utc = check(_trap_nights("UTC"), 51.60, -1.12, "Europe/London")
+    assert utc["clock"] == "UTC" and "keeps UTC" in utc["verdict"]
+    local = check(_trap_nights("local"), 51.60, -1.12, "Europe/London")     # crosses the March clock change
+    assert local["clock"] == "local" and "local time" in local["verdict"]
+    out = check(_trap_nights(8), 51.60, -1.12, "Europe/London")
+    assert out["clock"] == "UTC+8" and "neither" in out["verdict"]
+    assert check(_trap_nights(8), 51.60, -1.12)["clock"] == "UTC+8"
+    fixed = check(_trap_nights("UTC", fixed=True, start="2026-04-01"), 51.60, -1.12, "Europe/London")
+    assert "fixed schedule" in fixed["verdict"]
+    summer = check(_trap_nights("UTC", start="2026-05-10"), 51.60, -1.12, "Europe/London")   # all in BST
+    assert summer["clock"] is None and "can't tell" in summer["verdict"]
+    late = _trap_nights("UTC", start="2026-05-10", days=30)
+    cut = pd.to_datetime(late).dt.hour.between(1, 6) & (pd.to_datetime(late).dt.day == 20)
+    assert "2026-05-19" in check(late[~cut], 51.60, -1.12, "Europe/London").get("stopped_early", [])
+    jumped = _trap_nights("UTC")
+    jumped.iloc[len(jumped) // 2: len(jumped) // 2 + 30] += pd.Timedelta(hours=3)
+    assert check(jumped, 51.60, -1.12, "Europe/London").get("jumps")
