@@ -29,7 +29,8 @@ report_style <- function(data = NULL) {
 }
 
 #' Hours working each night
-#' @param data the list from `read_report_data()`; `deployment` its id
+#' @param data the list from `read_report_data()`
+#' @param deployment the deployment's id
 #' @export
 plot_working <- function(data, deployment) {
   s <- report_style(data)
@@ -44,6 +45,7 @@ plot_working <- function(data, deployment) {
 }
 
 #' Activity per hour working, each night
+#' @inheritParams plot_working
 #' @export
 plot_activity <- function(data, deployment) {
   s <- report_style(data)
@@ -57,6 +59,7 @@ plot_activity <- function(data, deployment) {
 }
 
 #' Mean temperature while working, each night (its own chart: never a second axis)
+#' @inheritParams plot_working
 #' @export
 plot_temperature <- function(data, deployment) {
   s <- report_style(data)
@@ -67,7 +70,7 @@ plot_temperature <- function(data, deployment) {
     ggplot2::geom_line(colour = s$categorical[4], linewidth = 0.8) +
     ggplot2::geom_point(colour = s$categorical[4], size = 1.2) +
     ggplot2::scale_x_date(date_labels = "%b", date_breaks = "1 month") +
-    ggplot2::labs(x = NULL, y = "mean temperature\nwhile working (°C)") + .theme(s)
+    ggplot2::labs(x = NULL, y = "mean temperature\nwhile working (\u00b0C)") + .theme(s)
 }
 
 .hbars <- function(labels, values, xlab, s) {
@@ -83,6 +86,7 @@ plot_temperature <- function(data, deployment) {
 }
 
 #' Images: individual insects in each group (moths together, other insects by order)
+#' @inheritParams plot_working
 #' @export
 plot_groups <- function(data, deployment) {
   s <- report_style(data)
@@ -95,6 +99,7 @@ plot_groups <- function(data, deployment) {
 }
 
 #' The most often recorded species
+#' @inheritParams plot_working
 #' @param n how many (default 20)
 #' @export
 plot_species <- function(data, deployment, n = 20) {

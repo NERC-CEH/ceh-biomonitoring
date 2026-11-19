@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "ceh-biomonitoring"
-version = "0.2.0"
+version = "0.3.0"
 description = "Biodiversity monitoring pipelines from UKCEH: birds (BirdNET or Perch), bats (BatDetect2) and moths/insects in light-trap images, on JASMIN, HPC or a laptop, plus uploading data to UKCEH."
 readme = "README.md"
 requires-python = ">=3.11"

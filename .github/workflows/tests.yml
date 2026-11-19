@@ -30,5 +30,8 @@ jobs:
         with:
           use-public-rspm: true
       - run: Rscript -e 'install.packages(c("jsonlite", "ggplot2", "testthat", "knitr"))'
-      - run: R CMD INSTALL r
-      - run: Rscript -e 'testthat::test_local("r", stop_on_failure = TRUE)'
+      - run: R CMD build --no-build-vignettes r
+      # R CMD check runs the tests too; suggested packages (quarto, arrow, EntoInsights) aren't needed
+      - run: _R_CHECK_FORCE_SUGGESTS_=false R CMD check --no-manual cehbio_*.tar.gz
+      - if: failure()
+        run: cat cehbio.Rcheck/00check.log || true

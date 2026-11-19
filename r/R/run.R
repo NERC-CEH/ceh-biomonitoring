@@ -123,6 +123,7 @@ cehbio_status <- function(pipeline = NULL, project = NULL, deployment = NULL, wa
 }
 
 #' Join a run's parts into its results (only needed after no_auto_combine)
+#' @inheritParams cehbio_run
 #' @export
 cehbio_combine <- function(pipeline, project, deployment) {
   cehbio("combine", pipeline, .opt("project", project), .opt("deployment", deployment))
@@ -130,7 +131,9 @@ cehbio_combine <- function(pipeline, project, deployment) {
 
 #' What time a light trap's clock kept
 #' @param folder,bucket,deployment,results where the photos or results are
-#' @param lat,lon the site; `timezone` e.g. "Europe/London"
+#' @param lat,lon the site
+#' @param timezone e.g. "Europe/London"
+#' @param device e.g. "lepisense" (helps read the file names)
 #' @export
 cehbio_clock_check <- function(lat, lon, timezone = NULL, folder = NULL, results = NULL, bucket = NULL,
                                deployment = NULL, device = NULL) {
@@ -142,6 +145,7 @@ cehbio_clock_check <- function(lat, lon, timezone = NULL, folder = NULL, results
 #'
 #' Writes deployments, nights (with weather and the moon), individuals and species tables to
 #' `<results>/<pipeline>/<project>/report/data/`. See `read_report_data()`.
+#' @inheritParams cehbio_run
 #' @param sites a CSV with deployment, latitude, longitude, timezone, clock, start, end
 #' @param weather "open-meteo" (non-commercial only), "era5-land" (commercial use allowed) or "none"
 #' @export

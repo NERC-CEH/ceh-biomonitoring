@@ -39,15 +39,15 @@ cehbio_report <- function(pipeline, project, deployments = NULL, sites = NULL, w
   what <- tools::toTitleCase(d$text$labels$what)
   jobs <- lapply(deps, function(dep) {
     info <- d$deployments[d$deployments$deployment_id == dep, ]
-    sub <- paste0(what, " · ", project,
-                  if (nrow(info) && !is.na(info$first_night)) paste0(" · ", info$first_night, " to ", info$last_night) else "")
+    sub <- paste0(what, " \u00b7 ", project,
+                  if (nrow(info) && !is.na(info$first_night)) paste0(" \u00b7 ", info$first_night, " to ", info$last_night) else "")
     list(qmd = "deployment.qmd", stem = dep, params = list(data_folder = folder, pipeline = pipeline,
                                                            project = project, deployment = dep, subtitle = sub))
   })
   if (is.null(deployments) && length(deps) > 1) {
     jobs[[length(jobs) + 1]] <- list(qmd = "project.qmd", stem = paste0(project, "_project"),
                                      params = list(data_folder = folder, pipeline = pipeline, project = project,
-                                                   subtitle = paste0(what, " · ", length(deps), " deployments")))
+                                                   subtitle = paste0(what, " \u00b7 ", length(deps), " deployments")))
   }
   files <- character()
   for (fmt in formats) for (j in jobs) {

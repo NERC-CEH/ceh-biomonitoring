@@ -56,6 +56,7 @@ read_report_data <- function(pipeline, project, folder = NULL) {
 
 #' One deployment's results, as the pipeline wrote them
 #'
+#' @inheritParams cehbio_run
 #' @param what "detections" (every detection), "files" (every file and its status), or for images
 #'   "analysis_ready" and "tracks"
 #' @export
