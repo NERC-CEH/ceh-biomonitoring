@@ -61,10 +61,16 @@ def _site(dep: str, sites: pd.DataFrame, det: pd.DataFrame) -> dict:
         if pd.isna(r.get(k)) and c in det.columns and det[c].notna().any():
             r[k] = float(pd.to_numeric(det[c], errors="coerce").dropna().iloc[0])
     day = lambda v: str(pd.Timestamp(v).date()) if isinstance(v, str) and v.strip() else None   # noqa: E731
-    return {"latitude": r.get("latitude"), "longitude": r.get("longitude"),
+    core = {"latitude": r.get("latitude"), "longitude": r.get("longitude"),
             "timezone": r.get("timezone") if isinstance(r.get("timezone"), str) else None,
             "clock": str(r.get("clock")).strip() if isinstance(r.get("clock"), str) else None,
             "start": day(r.get("start")), "end": day(r.get("end"))}
+    # any other columns (e.g. country, habitat, site_name) are carried into the deployments table
+    taken = set(core) | {"deployment", "deployment_id", "pipeline", "project", "first_night", "last_night",
+                         "nights_worked", "hours_worked", "files", "files_failed", "files_outside_deployment",
+                         "individuals", "taxa", "clock_used"}
+    core.update({k: (None if isinstance(v, float) and pd.isna(v) else v) for k, v in r.items() if k not in taken})
+    return core
 
 
 def _to_utc(clock_times: pd.Series, clock: str, tz: str | None) -> pd.Series:

@@ -85,7 +85,7 @@ def test_report_data_tables(settings, monkeypatch, tmp_path):
     monkeypatch.setattr(W, "hourly", fake_hourly)
     sites = tmp_path / "sites.csv"
     pd.DataFrame({"deployment": ["trap-1"], "latitude": [51.60], "longitude": [-1.12],
-                  "timezone": ["Europe/London"], "clock": ["local"]}).to_csv(sites, index=False)
+                  "timezone": ["Europe/London"], "clock": ["local"], "country": ["England"]}).to_csv(sites, index=False)
     r = D.build(settings, "images", "farm", sites=str(sites))
     out = settings.outputs_root / "images" / "farm" / "report" / "data"
     assert r["out"] == str(out) and r["deployments"] == 1
@@ -99,6 +99,7 @@ def test_report_data_tables(settings, monkeypatch, tmp_path):
     assert len(ind) == 4 and set(ind["kind"]) == {"moth", "other insect"}    # T1 is one individual, not two
     sp = pd.read_parquet(out / "species.parquet").set_index("taxon")
     assert sp.loc["Noctua pronuba", "individuals"] == 2 and sp.loc["Noctua pronuba", "nights"] == 2
+    assert pd.read_parquet(out / "deployments.parquet")["country"].iloc[0] == "England"   # extra columns kept
     about = json.loads((out / "about.json").read_text())
     assert about["weather"]["source"] == "open-meteo" and about["weather"]["commercial"] is False
     assert about["models"]["models"]["detector"] == "flat_bug_M_v2"

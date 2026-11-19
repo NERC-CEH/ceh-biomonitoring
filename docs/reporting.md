@@ -60,6 +60,7 @@ dep000123,51.60,-1.12,Europe/London,UTC,2026-05-11,2026-09-10
 | `deployment`, `latitude`, `longitude` | where it was |
 | `timezone` | e.g. `Europe/London`, `Asia/Singapore` |
 | `clock` | what the device's clock kept: `UTC`, `local`, or an offset like `+08:00`. Leave it out and `cehbio clock-check` decides where it can ([Recorders](recorders.md#checking-a-light-traps-clock)); otherwise local time is assumed, and `about.json` says so |
+| any other columns | e.g. `country` (England, Wales, Scotland, Northern Ireland: used for priority species lists in the in-house reports), `habitat`, `site_name`. They're kept in the deployments table |
 | `start`, `end` | when the unit went out and came in. Nights outside them, such as set-up tests in daylight, stay in the nights table marked `in_deployment = False`, and are left out of the individuals, species and totals |
 
 ## Weather
