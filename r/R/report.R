@@ -8,14 +8,15 @@
 #' @param pipeline "birds", "bats" or "images"
 #' @param project the project folder
 #' @param deployments only these (default: all)
-#' @param sites,weather passed to `cehbio_report_data()` when the tables are made
+#' @param sites,use,weather passed to `cehbio_report_data()` when the tables are made (`use`: is this a
+#'   commercial project? Asked if not given, then remembered)
 #' @param refresh remake the tables first (after new results)
 #' @param formats any of "html", "docx" (Word) and "pdf". PDF uses Quarto's own engine (Typst); where
 #'   that's blocked (some managed laptops block it), the Word version is converted by Word or LibreOffice
 #' @param reference_doc a Word file whose styles the Word report uses (e.g. a UKCEH template)
 #' @return the report files, invisibly
 #' @export
-cehbio_report <- function(pipeline, project, deployments = NULL, sites = NULL, weather = "open-meteo",
+cehbio_report <- function(pipeline, project, deployments = NULL, sites = NULL, use = NULL, weather = NULL,
                           refresh = FALSE, formats = "html", reference_doc = NULL) {
   need <- c("quarto", "knitr", "ggplot2")
   if (!all(vapply(need, requireNamespace, TRUE, quietly = TRUE))) {
@@ -29,8 +30,8 @@ cehbio_report <- function(pipeline, project, deployments = NULL, sites = NULL, w
   bad <- setdiff(formats, c("html", "docx", "pdf"))
   if (length(bad)) stop("Unknown format(s): ", paste(bad, collapse = ", "), ". Use html, docx, pdf.", call. = FALSE)
   folder <- file.path(results_folder(), pipeline, project, "report", "data")
-  if (refresh || !is.null(sites) || !file.exists(file.path(folder, "text.json"))) {
-    cehbio_report_data(pipeline, project, sites = sites, weather = weather)
+  if (refresh || !is.null(sites) || !is.null(use) || !file.exists(file.path(folder, "text.json"))) {
+    cehbio_report_data(pipeline, project, sites = sites, use = use, weather = weather)
   }
   d <- read_report_data(pipeline, project, folder = folder)
   out <- dirname(folder)

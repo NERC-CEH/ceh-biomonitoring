@@ -9,7 +9,8 @@ cehbio_report(
   project,
   deployments = NULL,
   sites = NULL,
-  weather = "open-meteo",
+  use = NULL,
+  weather = NULL,
   refresh = FALSE,
   formats = "html",
   reference_doc = NULL
@@ -22,7 +23,8 @@ cehbio_report(
 
 \item{deployments}{only these (default: all)}
 
-\item{sites, weather}{passed to \code{cehbio_report_data()} when the tables are made}
+\item{sites, use, weather}{passed to \code{cehbio_report_data()} when the tables are made (\code{use}: is this a
+commercial project? Asked if not given, then remembered)}
 
 \item{refresh}{remake the tables first (after new results)}
 

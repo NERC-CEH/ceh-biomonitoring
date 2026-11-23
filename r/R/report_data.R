@@ -198,15 +198,18 @@
 #' @param deployments only these (default: all in the project)
 #' @param sites a CSV with deployment, latitude, longitude, and optionally timezone, clock, start, end
 #'   (and any other columns, e.g. site_name or country, which are kept)
-#' @param weather "open-meteo" (non-commercial only), "era5-land" (commercial use allowed; needs a CDS
-#'   key) or "none"
+#' @param use is this a commercial project? "commercial" or "noncommercial". It decides the weather and
+#'   licence checks. If not given you're asked, and the answer is remembered for the project
+#' @param weather default: "open-meteo" for non-commercial projects, "era5-land" for commercial ones
+#'   (needs your own free Copernicus key: `cehbio_weather_setup()`); or "none"
 #' @param engine "r" (default) or "python" (the toolkit's `cehbio report-data`, if it's installed)
 #' @return a summary list, invisibly
 #' @export
-cehbio_report_data <- function(pipeline, project, deployments = NULL, sites = NULL, weather = "open-meteo", engine = "r") {
+cehbio_report_data <- function(pipeline, project, deployments = NULL, sites = NULL, use = NULL, weather = NULL,
+                               engine = "r") {
   if (engine == "python") {
-    return(invisible(cehbio("report-data", pipeline, .opt("project", project), .opt("sites", sites), .opt("weather", weather),
-                            if (length(deployments)) c("--deployment", deployments))))
+    return(invisible(cehbio("report-data", pipeline, .opt("project", project), .opt("sites", sites), .opt("use", use),
+                            .opt("weather", weather), if (length(deployments)) c("--deployment", deployments))))
   }
   pipeline <- match.arg(pipeline, c("birds", "bats", "images"))
   runs <- .runs(pipeline, project)
@@ -214,6 +217,8 @@ cehbio_report_data <- function(pipeline, project, deployments = NULL, sites = NU
   if (!nrow(runs)) stop("No ", pipeline, " runs in project '", project, "' under ", results_folder(), ".", call. = FALSE)
   out <- file.path(results_folder(), pipeline, project, "report", "data")
   dir.create(out, recursive = TRUE, showWarnings = FALSE)
+  use <- .decide_use(use, out)
+  weather <- .weather_for(use, weather)
   site_table <- .read_sites(sites)
   notes <- character()
   dep_rows <- list(); night_parts <- list(); ind_parts <- list(); prov <- list()
@@ -297,6 +302,7 @@ cehbio_report_data <- function(pipeline, project, deployments = NULL, sites = NU
   tables <- list(deployments = .rbind_fill(lapply(dep_rows, function(r) as.data.frame(r, stringsAsFactors = FALSE))),
                  nights = .rbind_fill(night_parts), individuals = .rbind_fill(ind_parts))
   tables$species <- .species_table(tables$individuals)
+  notes <- c(notes, .licence_notes(use, .model_names(prov), pipeline))
   for (n in names(tables)) {
     nanoparquet::write_parquet(tables[[n]], file.path(out, paste0(n, ".parquet")))
     .write_csv(tables[[n]], file.path(out, paste0(n, ".csv")))
@@ -304,7 +310,7 @@ cehbio_report_data <- function(pipeline, project, deployments = NULL, sites = NU
   w <- if (!is.null(weather) && weather != "none") c(list(source = weather), .WEATHER_SOURCES[[weather]]) else NULL
   about <- list(made_at = format(Sys.time(), "%Y-%m-%dT%H:%M:%S+00:00", tz = "UTC"),
                 toolkit_version = as.character(utils::packageVersion("cehbio")), made_by = "R",
-                pipeline = pipeline, project = project, deployments = I(vapply(dep_rows, `[[`, "", "deployment_id")),
+                pipeline = pipeline, project = project, use = use, deployments = I(vapply(dep_rows, `[[`, "", "deployment_id")),
                 night = "noon to noon on the device's clock",
                 individual = c(images = "an insect followed through consecutive photos (a track)",
                                birds = "a species calling in one recording, pauses of up to 60 s",

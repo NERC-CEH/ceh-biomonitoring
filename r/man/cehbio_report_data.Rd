@@ -9,7 +9,8 @@ cehbio_report_data(
   project,
   deployments = NULL,
   sites = NULL,
-  weather = "open-meteo",
+  use = NULL,
+  weather = NULL,
   engine = "r"
 )
 }
@@ -23,8 +24,11 @@ cehbio_report_data(
 \item{sites}{a CSV with deployment, latitude, longitude, and optionally timezone, clock, start, end
 (and any other columns, e.g. site_name or country, which are kept)}
 
-\item{weather}{"open-meteo" (non-commercial only), "era5-land" (commercial use allowed; needs a CDS
-key) or "none"}
+\item{use}{is this a commercial project? "commercial" or "noncommercial". It decides the weather and
+licence checks. If not given you're asked, and the answer is remembered for the project}
+
+\item{weather}{default: "open-meteo" for non-commercial projects, "era5-land" for commercial ones
+(needs your own free Copernicus key: \code{cehbio_weather_setup()}); or "none"}
 
 \item{engine}{"r" (default) or "python" (the toolkit's \verb{cehbio report-data}, if it's installed)}
 }

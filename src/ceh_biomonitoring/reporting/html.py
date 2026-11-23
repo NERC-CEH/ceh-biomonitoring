@@ -264,8 +264,9 @@ def project_page(data: Path, t: dict) -> str:
     return _page(f"{t['project']}", f"{lab['what'].capitalize()} · {len(deps)} deployments", "\n".join(body))
 
 
-def make(settings, pipeline: str, project: str, sites: str | None = None, weather: str = "open-meteo",
-         refresh: bool = False, formats: list[str] | None = None, reference_doc: str | None = None) -> list[Path]:
+def make(settings, pipeline: str, project: str, sites: str | None = None, weather: str | None = None,
+         refresh: bool = False, formats: list[str] | None = None, reference_doc: str | None = None,
+         use: str | None = None) -> list[Path]:
     """Reports in each of `formats` (html, docx, pdf; default html)."""
     formats = formats or ["html"]
     bad = sorted(set(formats) - {"html", "docx", "pdf"})
@@ -274,7 +275,7 @@ def make(settings, pipeline: str, project: str, sites: str | None = None, weathe
     from . import data as D
     data = settings.outputs_root / pipeline / project / "report" / "data"
     if refresh or not (data / "text.json").exists():
-        D.build(settings, pipeline, project, sites=sites, weather=weather)
+        D.build(settings, pipeline, project, sites=sites, weather=weather, use=use)
     t = json.loads((data / "text.json").read_text(encoding="utf-8"))
     out = data.parent
     written = []
@@ -300,7 +301,10 @@ def add_command(sub, common) -> None:
     p.add_argument("pipeline", choices=["birds", "bats", "images"])
     p.add_argument("--project", required=True)
     p.add_argument("--sites", help="CSV: deployment, latitude, longitude, timezone, clock, start, end")
-    p.add_argument("--weather", default="open-meteo", choices=["open-meteo", "era5-land", "none"])
+    p.add_argument("--use", choices=["commercial", "noncommercial"],
+                   help="is this a commercial project? (asked if not given, then remembered for the project)")
+    p.add_argument("--weather", choices=["open-meteo", "era5-land", "none"],
+                   help="default: open-meteo (non-commercial) or era5-land (commercial)")
     p.add_argument("--refresh", action="store_true", help="remake the report data first (after new results)")
     p.add_argument("--format", nargs="+", default=["html"], choices=["html", "docx", "pdf"],
                    help="html (default), docx (Word) and/or pdf; Word and PDF need Quarto (fetched the first time if you have none)")
@@ -309,8 +313,8 @@ def add_command(sub, common) -> None:
     def go(a):
         from ..settings import Settings
         s = Settings.load(getattr(a, "profile", None))
-        files = make(s, a.pipeline, a.project, a.sites, a.weather, a.refresh or bool(a.sites), a.format,
-                     a.reference_doc)
+        files = make(s, a.pipeline, a.project, a.sites, a.weather, a.refresh or bool(a.sites) or bool(a.use), a.format,
+                     a.reference_doc, use=a.use)
         print(f"{len(files)} reports in {files[0].parent}:" if files else "No reports made.")
         for f in files:
             print(f"  {f.name}")

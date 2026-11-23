@@ -63,6 +63,16 @@ dep000123,51.60,-1.12,Europe/London,UTC,2026-05-11,2026-09-10
 | any other columns | e.g. `country` (England, Wales, Scotland, Northern Ireland: used for priority species lists in the in-house reports), `habitat`, `site_name`. They're kept in the deployments table |
 | `start`, `end` | when the unit went out and came in. Nights outside them, such as set-up tests in daylight, stay in the nights table marked `in_deployment = False`, and are left out of the individuals, species and totals |
 
+## Commercial or not
+
+Every project's reports say whether it's **commercial** (work for a paying client or business) or not, because that decides what they may use. Give it with `--use commercial` or `--use noncommercial` (in R: `use = "commercial"`). If you don't, you're asked, and the answer is remembered for the project, so you're only asked once.
+
+| | Non-commercial | Commercial |
+|---|---|---|
+| Weather | Open-Meteo | ERA5-Land, which needs your own free Copernicus key. If there isn't one yet, you're offered the set-up there and then ([see below](#weather-for-commercial-work-era5-land)), or a report without weather for now |
+| Models | | each model licensed for non-commercial use only (BirdNET, BatDetect2, the moth species models) gets a warning in the report's notes |
+| In-house analysis (UKCEH) | | only open-licence local records (CC0, CC BY, OGL) |
+
 ## Weather
 
 The weather for each night covers **only the hours the device was working**: mean and lowest temperature, temperature at the start, rain (total and hours with rain), wind, cloud and humidity.

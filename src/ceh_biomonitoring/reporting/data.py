@@ -179,7 +179,7 @@ def _provenance(paths) -> dict:
 
 
 def build(settings, pipeline: str, project: str, deployments: list[str] | None = None, sites: str | None = None,
-          weather: str = "open-meteo", out: Path | None = None) -> dict:
+          weather: str | None = None, out: Path | None = None, use: str | None = None) -> dict:
     runs = [r for r in layout.all_runs(settings.outputs_root) if r[0] == pipeline and r[1] == project
             and (not deployments or r[2] in deployments)]
     if not runs:
@@ -187,6 +187,9 @@ def build(settings, pipeline: str, project: str, deployments: list[str] | None =
                          f"`cehbio status` lists them.")
     out = Path(out) if out else settings.outputs_root / pipeline / project / "report" / "data"
     out.mkdir(parents=True, exist_ok=True)
+    from . import use as U
+    use = U.decide(use, out)
+    weather = U.weather_for(use, weather, settings)
     site_table = read_sites(sites)
     notes, dep_rows, night_parts, ind_parts, prov = [], [], [], [], {}
     for _, _, dep, rp in runs:
@@ -266,11 +269,13 @@ def build(settings, pipeline: str, project: str, deployments: list[str] | None =
               "nights": pd.concat(night_parts, ignore_index=True) if night_parts else pd.DataFrame(),
               "individuals": pd.concat(ind_parts, ignore_index=True) if ind_parts else pd.DataFrame()}
     tables["species"] = species_table(tables["individuals"])
+    from .text import model_names
+    notes += U.licence_notes(use, model_names(prov), pipeline)
     for name, df in tables.items():
         df.to_parquet(out / f"{name}.parquet", index=False)
         df.to_csv(out / f"{name}.csv", index=False)
     from . import weather as W
-    about = {"made_at": now_utc(), "toolkit_version": __version__, "pipeline": pipeline, "project": project,
+    about = {"made_at": now_utc(), "toolkit_version": __version__, "pipeline": pipeline, "project": project, "use": use,
              "deployments": [r["deployment_id"] for r in dep_rows], "night": "noon to noon on the device's clock",
              "individual": {"images": "an insect followed through consecutive photos (a track)",
                             "birds": "a species calling in one recording, pauses of up to 60 s",
@@ -292,15 +297,18 @@ def add_command(sub, common) -> None:
     p.add_argument("--project", required=True, help="the project folder (as in cehbio run --project)")
     p.add_argument("--deployment", nargs="*", help="only these deployments (default: all in the project)")
     p.add_argument("--sites", help="CSV: deployment, latitude, longitude, timezone, clock")
-    p.add_argument("--weather", default="open-meteo", choices=["open-meteo", "era5-land", "none"],
-                   help="open-meteo (default; non-commercial only) or era5-land (Copernicus; commercial use allowed, "
-                        "needs a free CDS key)")
+    p.add_argument("--use", choices=["commercial", "noncommercial"],
+                   help="is this a commercial project? It decides the weather and licence checks (asked if not given, "
+                        "then remembered for the project)")
+    p.add_argument("--weather", choices=["open-meteo", "era5-land", "none"],
+                   help="default: open-meteo for non-commercial projects, era5-land for commercial ones (needs your own "
+                        "free Copernicus key: cehbio weather-setup)")
     p.add_argument("--out", help="folder for the tables (default <results>/<pipeline>/<project>/report/data)")
 
     def go(a):
         from ..settings import Settings
         r = build(Settings.load(getattr(a, "profile", None)), a.pipeline, a.project, a.deployment, a.sites,
-                  a.weather, Path(a.out) if a.out else None)
+                  a.weather, Path(a.out) if a.out else None, use=a.use)
         print(f"{r['deployments']} deployments, {r['nights']} nights, {r['individuals']:,} individuals, "
               f"{r['species']} species rows -> {r['out']}")
         for n in r["notes"]:

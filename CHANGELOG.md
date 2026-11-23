@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+**Commercial or not**
+- Reports and report tables need to know whether the project is commercial (`--use`, R: `use =`): asked if not given, then remembered. Commercial projects get ERA5-Land weather (with the set-up offered if there's no key) and a warning for each model licensed for non-commercial use only.
+
 **Weather for commercial work**
 - `cehbio weather-setup` (R: `cehbio_weather_setup()`) walks you through the free Copernicus account, accepting the ERA5-Land licence and saving your key, checking each step. Clear messages for a missing key, a wrong key or a licence not yet accepted. `cdsapi` is no longer needed, and a weather key no longer needs object-store keys beside it.
 

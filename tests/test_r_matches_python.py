@@ -121,16 +121,17 @@ def _compare(a: Path, b: Path, name: str, keys: list[str]):
             assert (xs == ys).all(), f"{name}.{c} differs:\n{pd.DataFrame({'py': xs, 'r': ys})[xs != ys].head()}"
 
 
-def _both(tmp_path, pipeline, project, sites_rows, weather="none"):
+def _both(tmp_path, pipeline, project, sites_rows, weather="none", use="noncommercial"):
     from ceh_biomonitoring.reporting import data as D
     sites = tmp_path / "sites.csv"
     pd.DataFrame(sites_rows).to_csv(sites, index=False)
     shutil.copytree(tmp_path / "py", tmp_path / "r")
     s = Settings.load(profile="local", overrides={"outputs_root": str(tmp_path / "py"), "tmp_root": str(tmp_path / "tmp")},
                       settings_file=tmp_path / "none.yml")
-    D.build(s, pipeline, project, sites=str(sites), weather=weather)
+    D.build(s, pipeline, project, sites=str(sites), weather=weather, use=use)
     code = (f'options(cehbio.results = "{(tmp_path / "r").as_posix()}"); '
-            f'cehbio::cehbio_report_data("{pipeline}", "{project}", sites = "{sites.as_posix()}", weather = "{weather}")')
+            f'cehbio::cehbio_report_data("{pipeline}", "{project}", sites = "{sites.as_posix()}", weather = "{weather}", '
+            f'use = "{use}")')
     r = subprocess.run([RSCRIPT, "-e", code], capture_output=True, text=True)
     assert r.returncode == 0, r.stderr[-3000:]
     return (tmp_path / "py" / pipeline / project / "report" / "data", tmp_path / "r" / pipeline / project / "report" / "data")
@@ -167,7 +168,8 @@ def test_audio_tables_match(tmp_path, monkeypatch, pipeline):
     _audio(tmp_path / "py", pipeline, "wood-1", 3)
     _audio(tmp_path / "py", pipeline, "wood-2", 4)
     py, r = _both(tmp_path, pipeline, "woods", [{"deployment": "wood-1", "latitude": 51.6, "longitude": -1.12},
-                                                 {"deployment": "wood-2", "latitude": 52.0, "longitude": 0.1}])
+                                                 {"deployment": "wood-2", "latitude": 52.0, "longitude": 0.1}],
+                  use="commercial" if pipeline == "bats" else "noncommercial")
     for name, keys in (("deployments", ["deployment_id"]), ("nights", ["deployment_id", "night"]),
                        ("individuals", ["deployment_id", "unit_id"]), ("species", ["deployment_id", "taxon"])):
         _compare(py, r, name, keys)
