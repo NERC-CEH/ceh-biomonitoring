@@ -3,7 +3,7 @@
 #   open-meteo  (default) Open-Meteo's historical weather: from 2022 the finest model for the place (in the
 #               UK the Met Office's 2 km model), earlier ERA5. Non-commercial use only; CC BY 4.0.
 #   era5-land   ERA5-Land (Copernicus): about 9 km, any use including commercial, with credit. Needs a free
-#               CDS key, as "CDSAPI_KEY" in your credentials file.
+#               Copernicus key, set up once with cehbio_weather_setup().
 # Hourly values are cached (in the same folder as the Python toolkit's), so a report doesn't ask twice.
 
 .WEATHER_SOURCES <- list(
@@ -53,44 +53,9 @@
   do.call(rbind, parts)
 }
 
-# ERA5-Land point time series through the Copernicus CDS API (submit, wait, download).
+# ERA5-Land at a point, through the Copernicus CDS (copernicus.R).
 .era5_land <- function(lat, lon, start, end, key) {
-  api <- "https://cds.climate.copernicus.eu/api/retrieve/v1/processes/reanalysis-era5-land-timeseries/execution"
-  body <- jsonlite::toJSON(list(inputs = list(
-    variable = c("2m_temperature", "2m_dewpoint_temperature", "total_precipitation",
-                 "10m_u_component_of_wind", "10m_v_component_of_wind"),
-    location = list(longitude = round(lon, 3), latitude = round(lat, 3)),
-    date = paste0(start, "/", end), data_format = "csv")), auto_unbox = TRUE)
-  h <- function() {
-    x <- curl::new_handle(timeout = 300)
-    curl::handle_setheaders(x, "PRIVATE-TOKEN" = key, "Content-Type" = "application/json")
-    if (.Platform$OS.type == "windows") curl::handle_setopt(x, ssl_options = 2)
-    x
-  }
-  p <- h()
-  curl::handle_setopt(p, postfields = body)
-  job <- jsonlite::fromJSON(rawToChar(curl::curl_fetch_memory(api, handle = p)$content))
-  status_url <- sprintf("https://cds.climate.copernicus.eu/api/retrieve/v1/jobs/%s", job$jobID)
-  for (i in 1:240) {
-    st <- jsonlite::fromJSON(rawToChar(curl::curl_fetch_memory(status_url, handle = h())$content))
-    if (st$status %in% c("successful", "failed", "rejected", "dismissed")) break
-    Sys.sleep(min(30, 2 * i))
-  }
-  if (!identical(st$status, "successful")) stop("ERA5-Land request ", st$status)
-  res <- jsonlite::fromJSON(rawToChar(curl::curl_fetch_memory(paste0(status_url, "/results"), handle = h())$content))
-  tmp <- tempfile()
-  curl::curl_download(res$asset$value$href, tmp, handle = h())
-  files <- if (grepl("^PK", readChar(tmp, 2, useBytes = TRUE))) {
-    d <- tempfile(); utils::unzip(tmp, exdir = d); list.files(d, "\\.csv$", full.names = TRUE, recursive = TRUE)
-  } else tmp
-  df <- NULL
-  for (f in files) {
-    p <- utils::read.csv(f, stringsAsFactors = FALSE)
-    tc <- grep("time", names(p), ignore.case = TRUE, value = TRUE)[1]
-    names(p)[names(p) == tc] <- "time_utc"
-    p <- p[, intersect(names(p), c("time_utc", "t2m", "d2m", "tp", "u10", "v10")), drop = FALSE]
-    df <- if (is.null(df)) p else merge(df, p, by = "time_utc", all = TRUE)
-  }
+  df <- .cds_fetch(lat, lon, start, end, key)
   df$time_utc <- .parse_times(df$time_utc)
   df <- df[order(df$time_utc), ]
   t <- df$t2m - 273.15
@@ -105,12 +70,6 @@
              cloud_cover_pct = NA_real_, weather_model = "era5-land")
 }
 
-.credentials <- function() {
-  f <- file.path(.config_dir(), "credentials.json")
-  if (!file.exists(f)) return(list())
-  tryCatch(jsonlite::fromJSON(f, simplifyVector = TRUE), error = function(e) list())
-}
-
 .hourly_weather <- function(source, lat, lon, start, end) {
   if (!source %in% names(.WEATHER_SOURCES))
     stop("Unknown weather source '", source, "'. Choose from: open-meteo, era5-land, or none", call. = FALSE)
@@ -121,9 +80,8 @@
     return(d)
   }
   d <- if (source == "open-meteo") .open_meteo(lat, lon, start, end) else {
-    key <- .credentials()$CDSAPI_KEY
-    if (is.null(key)) stop("ERA5-Land needs a Copernicus CDS key: add \"CDSAPI_KEY\" to your credentials file ",
-                           "(free account at https://cds.climate.copernicus.eu)", call. = FALSE)
+    key <- .cds_saved_key()
+    if (is.null(key)) stop("ERA5-Land weather needs your own free Copernicus key. ", .CDS_HOW_TO, call. = FALSE)
     .era5_land(lat, lon, start, end, key)
   }
   if (!is.null(d) && nrow(d) && end < Sys.Date() - 7) nanoparquet::write_parquet(d, f)

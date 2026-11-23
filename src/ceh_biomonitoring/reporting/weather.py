@@ -8,8 +8,8 @@ Two sources (--weather):
               services behind it). https://open-meteo.com
   era5-land   ECMWF's ERA5-Land reanalysis from the Copernicus Climate Data Store: about 9 km, from 1950,
               about 5 days behind. Free for any use, commercial included, if credited ("Contains modified
-              Copernicus Climate Change Service information"). Needs a free CDS account: put your key in
-              the credentials file as "CDSAPI_KEY" (and pip install cdsapi). No cloud cover in ERA5-Land.
+              Copernicus Climate Change Service information"). Needs your own free Copernicus key, set
+              up once with `cehbio weather-setup` (see copernicus.py). No cloud cover in ERA5-Land.
 
 Hourly values are cached in <models cache>/weather/, so re-running a report doesn't ask again.
 """
@@ -74,38 +74,13 @@ def open_meteo(lat: float, lon: float, start: date, end: date) -> pd.DataFrame:
 
 
 def era5_land(lat: float, lon: float, start: date, end: date, key: str) -> pd.DataFrame:
-    """Hourly UTC weather from ERA5-Land point time series (Copernicus CDS)."""
-    try:
-        import cdsapi
-    except ImportError as e:
-        raise SystemExit("ERA5-Land needs cdsapi: pip install cdsapi") from e
-    import tempfile
-    import zipfile
-    c = cdsapi.Client(url="https://cds.climate.copernicus.eu/api", key=key, quiet=True, progress=False)
-    with tempfile.TemporaryDirectory() as tmp:
-        out = Path(tmp) / "era5land.zip"
-        c.retrieve("reanalysis-era5-land-timeseries", {
-            "variable": ["2m_temperature", "2m_dewpoint_temperature", "total_precipitation",
-                         "10m_u_component_of_wind", "10m_v_component_of_wind"],
-            "location": {"longitude": round(lon, 3), "latitude": round(lat, 3)},
-            "date": [f"{start.isoformat()}/{end.isoformat()}"], "data_format": "csv"}, str(out))
-        parts = []
-        if zipfile.is_zipfile(out):
-            with zipfile.ZipFile(out) as z:
-                for n in z.namelist():
-                    if n.endswith(".csv"):
-                        parts.append(pd.read_csv(z.open(n)))
-        else:
-            parts.append(pd.read_csv(out))
-    df = None
-    for p in parts:
-        t = next(c for c in p.columns if "time" in c.lower())
-        p = p.rename(columns={t: "time_utc"})
-        keep = ["time_utc"] + [c for c in p.columns if c in ("t2m", "d2m", "tp", "u10", "v10")]
-        df = p[keep] if df is None else df.merge(p[keep], on="time_utc", how="outer")
-    if df is None:
+    """Hourly UTC weather from ERA5-Land point time series (Copernicus CDS: see copernicus.py)."""
+    from .copernicus import fetch
+    df = fetch(lat, lon, start.isoformat(), end.isoformat(), key)
+    if df is None or not len(df) or "t2m" not in df.columns:
         return pd.DataFrame(columns=["time_utc", *VARIABLES])
     df["time_utc"] = pd.to_datetime(df["time_utc"]).dt.tz_localize(None)
+    df = df.sort_values("time_utc").reset_index(drop=True)
     t = df.get("t2m") - 273.15
     d = df.get("d2m") - 273.15
     out = pd.DataFrame({"time_utc": df["time_utc"], "temperature_c": t})
@@ -130,11 +105,10 @@ def hourly(settings, source: str, lat: float, lon: float, start: date, end: date
     if source == "open-meteo":
         df = open_meteo(lat, lon, start, end)
     else:
-        from .. import objectstore
-        key = (objectstore.load_credentials(settings) or {}).get("CDSAPI_KEY")
+        from .copernicus import HOW_TO, saved_key
+        key = saved_key(settings)
         if not key:
-            raise SystemExit("ERA5-Land needs a Copernicus CDS key: add \"CDSAPI_KEY\" to your credentials file "
-                             "(free account at https://cds.climate.copernicus.eu)")
+            raise SystemExit(f"ERA5-Land weather needs your own free Copernicus key. {HOW_TO}")
         df = era5_land(lat, lon, start, end, key)
     if len(df) and end < date.today() - timedelta(days=7):      # recent days may still be filled in later
         df.to_parquet(f, index=False)

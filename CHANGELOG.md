@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+**Weather for commercial work**
+- `cehbio weather-setup` (R: `cehbio_weather_setup()`) walks you through the free Copernicus account, accepting the ERA5-Land licence and saving your key, checking each step. Clear messages for a missing key, a wrong key or a licence not yet accepted. `cdsapi` is no longer needed, and a weather key no longer needs object-store keys beside it.
+
 **Reporting in R with no Python**
 - The R package makes the report tables itself, by the same rules (`tests/test_r_matches_python.py` checks they're identical, on every push). Sorting ties now break the same way in both.
 

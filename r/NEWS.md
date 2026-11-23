@@ -1,5 +1,7 @@
 # cehbio 0.3.0
 
+- `cehbio_weather_setup()`: walks you through setting up ERA5-Land weather for commercial reports (a free
+  Copernicus account, the licence, your key), checks each step, and saves the key privately.
 - The report tables are made in R (`cehbio_report_data()`), with no Python: the same tables, numbers and
   words as Python's `cehbio report-data`, checked by a test. `engine = "python"` uses Python instead.
   Reports from R need no Python at all; `cehbio_install("reports")` installs no Python.

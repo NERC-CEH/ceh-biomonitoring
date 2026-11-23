@@ -70,10 +70,40 @@ The weather for each night covers **only the hours the device was working**: mea
 | `--weather` | Detail | Use | Needs |
 |---|---|---|---|
 | `open-meteo` (default) | from 2022, the finest weather model for the place (in the UK the Met Office's 2 km model); before 2022, ERA5 (about 25 km) | **non-commercial only** on the free service | internet |
-| `era5-land` | ECMWF's ERA5-Land, about 9 km, from 1950, about 5 days behind. No cloud cover | **any use, commercial included**, if credited | a free [Copernicus CDS](https://cds.climate.copernicus.eu) account: add `"CDSAPI_KEY"` to your credentials file, and `pip install cdsapi` |
+| `era5-land` | ECMWF's ERA5-Land, about 9 km, from 1950, about 5 days behind. No cloud cover | **any use, commercial included**, if credited (CC BY 4.0) | your own free Copernicus key, set up once: [see below](#weather-for-commercial-work-era5-land) |
 | `none` | | | |
 
 The weather is cached in your model cache, so running the report again doesn't fetch it again. `about.json` holds the credit line to put in reports.
+
+### Weather for commercial work (ERA5-Land)
+
+Open-Meteo's free service is for non-commercial work only. For commercial reports, use `--weather era5-land` (in R: `weather = "era5-land"`). ERA5-Land is free for any use, but each person needs their **own** free Copernicus account and key. You set it up once, in about 5 minutes, and the toolkit walks you through it and checks each step:
+
+```bash
+cehbio weather-setup
+```
+```r
+cehbio::cehbio_weather_setup()
+```
+
+The three steps it takes you through:
+
+1. **Make a free account** at [cds.climate.copernicus.eu](https://cds.climate.copernicus.eu): **Login - Register** (top right). Confirm the email they send.
+2. **Accept the ERA5-Land licence, once.** On the [ERA5-Land time series page](https://cds.climate.copernicus.eu/datasets/reanalysis-era5-land-timeseries?tab=download), logged in, go to the **Download** tab, scroll to the bottom, and under **Terms of use** click **Accept** (it's the CC-BY licence). Without this, Copernicus refuses every request, even with a good key.
+3. **Copy your key**: on [your profile page](https://cds.climate.copernicus.eu/profile), copy the **API Token** and paste it when asked. It stays hidden as you paste it.
+
+It checks the key and the licence with Copernicus, then saves the key privately as `CDSAPI_KEY` in your credentials file (`~/.config/ceh-biomonitoring/credentials.json`), where both Python and R find it. It's never shown on screen. To check it later: `cehbio weather-setup --check` (in R: `cehbio_weather_setup(check = TRUE)`).
+
+Then make the tables or reports as usual, with ERA5-Land:
+
+```bash
+cehbio report-data images --project farm1 --sites sites.csv --weather era5-land
+```
+```r
+cehbio_report("images", "farm1", sites = "sites.csv", weather = "era5-land")
+```
+
+Each site's weather takes a minute or two the first time (Copernicus queues requests), then it's kept. If something's wrong, the message says what to do: no key yet, a key Copernicus doesn't accept, or a licence not yet accepted. **Accounts are personal: please don't share a key.** The credit line for reports is in `about.json`.
 
 **The moon:** each night has how full the moon was (`moon_illumination`, 0 new to 1 full), and the share of the working hours it was above the horizon (`moon_up_share`).
 
