@@ -1,68 +1,104 @@
 # CEH Biomonitoring
 
-Tools from the UK Centre for Ecology & Hydrology (UKCEH) for biodiversity monitoring with automated recorders and light traps.
+Tools from the UK Centre for Ecology & Hydrology (UKCEH) for monitoring wildlife with automated recorders and light traps: find birds, bats and moths in your recordings and photos, have the results checked by experts, and turn them into tables, reports and videos. On a laptop, on JASMIN or on another computing cluster, in Python or in R.
 
-- **Send your data to UKCEH**, if you collect recordings or images for a UKCEH project.
-- **Find birds, bats and insects in your own data**, on a laptop, on JASMIN or on another computing cluster.
+**Sending data to UKCEH for a project?** You only need [Setting up your sites](docs/setting-up-sites.md) and the [Upload guide](docs/upload-guide.md).
 
-| What | Tool | Command | Guide |
+**Analysing your own data?** [Install](#install), then follow [Start here](#start-here).
+
+## Contents
+
+1. [What it does](#what-it-does)
+   - [Send your data to UKCEH](#1-send-your-data-to-ukceh)
+   - [Find wildlife in your recordings and photos](#2-find-wildlife-in-your-recordings-and-photos)
+   - [Have the results checked by experts](#3-have-the-results-checked-by-experts)
+   - [Analysis and reporting](#4-analysis-and-reporting)
+   - [Visualisation](#5-visualisation)
+2. [Install](#install)
+3. [Start here](#start-here)
+4. [Using R](#using-r)
+5. [Your results folder](#your-results-folder)
+6. [Models, licences and acknowledgements](#models-licences-and-acknowledgements)
+7. [Help, words used, and the repository](#help)
+
+---
+
+## What it does
+
+### 1. Send your data to UKCEH
+
+For partners collecting recordings or photos for a UKCEH project. No coding needed.
+
+| | Command | Guide |
+|---|---|---|
+| Ask for a deployment (one device, one site, one survey) | `cehbio deployments request` | [Setting up your sites](docs/setting-up-sites.md) |
+| Upload recordings or photos, with a log so nothing is sent twice | `cehbio upload` | [Upload guide](docs/upload-guide.md) |
+
+### 2. Find wildlife in your recordings and photos
+
+| What | Models | Command | Guide |
 |---|---|---|---|
-| Set up your sites (deployments) for uploading | the UKCEH upload service | `cehbio deployments` | [Setting up your sites](docs/setting-up-sites.md) |
-| Upload recordings or images to UKCEH | the UKCEH upload service | `cehbio upload` | [Upload guide](docs/upload-guide.md) |
-| Birds in audible recordings | **BirdNET** or **Perch** (your choice) | `cehbio run birds` | [Birds](docs/birds.md) |
-| Bats in ultrasonic recordings | **BatDetect2** | `cehbio run bats` | [Bats](docs/bats.md) |
-| Moths and other insects in light-trap images | insect detection, moth/non-moth, order and regional species models for AMI traps and LepiSense | `cehbio run images` | [Images](docs/images.md) |
-| Expert checks of the results (birds, bats, images) | fair samples for experts, packaged as audio clips or for the [Mothbot](https://mothbot-classify.vercel.app) labelling site, and their answers read back | `cehbio validate` | [Manual validation](docs/validation.md), [Sampling methods](docs/sampling-methods.md) |
-| Analysis-ready tables: nights with weather and the moon, individuals, species | weather from Open-Meteo or ERA5-Land; works with EntoInsights | `cehbio report-data` | [Reporting](docs/reporting.md#the-tables) |
-| Summary reports per deployment and project, in HTML, Word and PDF | | `cehbio report` | [Reporting](docs/reporting.md) |
-| Videos of a night's photos (boxes, names, tracks) and soundscapes of recordings (spectrogram, sound, detections) | | `cehbio video`, `cehbio soundscape` | [Videos and soundscapes](docs/videos.md) |
-| Everything from R | the `cehbio` R package: uploading and reports with no Python at all | `cehbio_upload()`, `cehbio_run()`, `cehbio_report()` ... | [From R](docs/r.md) |
+| **Birds** in audible recordings | BirdNET or Perch (your choice) | `cehbio run birds` | [Birds](docs/birds.md) |
+| **Bats** in ultrasonic recordings | BatDetect2 | `cehbio run bats` | [Bats](docs/bats.md) |
+| **Moths and other insects** in light-trap photos (AMI traps, LepiSense) | finding insects, moth or not, insect order, moth species per region; each insect followed from photo to photo | `cehbio run images` | [Images](docs/images.md) |
 
-You only install what you need. Everything shares one environment, called `ceh-biomonitoring`.
+Before you start: [Recorders and file names](docs/recorders.md) (so every result gets its date and time). For big jobs and clusters: [Running and results](docs/running.md). `cehbio status` shows how far every run has got.
 
-UKCEH also offers further analysis as a service, e.g. regional species lists, noise filtering, expert verification and reporting. Contact UKCEH if you would like to know more.
+### 3. Have the results checked by experts
+
+The models make mistakes, so their results are suggestions until an expert has checked them.
+
+| | Command | Guide |
+|---|---|---|
+| Choose fair samples for experts, package them (audio clips with spectrograms, or [Mothbot](https://mothbot-classify.vercel.app) for photos), and read their answers back | `cehbio validate` | [Manual validation](docs/validation.md), [Sampling methods](docs/sampling-methods.md) |
+
+### 4. Analysis and reporting
+
+| | Command | Guide |
+|---|---|---|
+| **Report tables**: deployments; nights with the weather and the moon over the hours the device worked; individuals; species. They work with [EntoInsights](https://github.com/AMI-system/EntoInsights) | `cehbio report-data` | [Reporting](docs/reporting.md#the-tables) |
+| **Summary reports** per deployment and for the project, in HTML, Word and PDF | `cehbio report` | [Reporting](docs/reporting.md) |
+| **Commercial projects**: say so once (`--use commercial`) and the weather and licence checks follow | | [Commercial or not](docs/reporting.md#commercial-or-not) |
+| **Weather for commercial work** (ERA5-Land): a walkthrough sets up your free Copernicus key | `cehbio weather-setup` | [Weather](docs/reporting.md#weather-for-commercial-work-era5-land) |
+
+### 5. Visualisation
+
+| | Command | Guide |
+|---|---|---|
+| **A night at the light trap**: every photo in order, insects boxed and named, tracks with trails; or one insect followed close up | `cehbio video` | [Videos and soundscapes](docs/videos.md) |
+| **Soundscapes**: each species' best moment with its sound and a moving spectrogram (bats slowed down so you can hear them), and the whole day at a glance | `cehbio soundscape` | [Videos and soundscapes](docs/videos.md) |
+
+UKCEH also offers further analysis as a service: regional species lists, noise filtering, expert verification and reporting. Contact UKCEH if you would like to know more.
 
 ---
 
 ## Install
 
-Nothing to install first: no Miniforge, conda or admin rights. The installer fetches everything itself (Python 3.11 and the packages, through a small program called [uv](https://docs.astral.sh/uv)) and keeps it in one folder of its own.
+Nothing to install first: no Miniforge, conda or admin rights. The installer fetches everything itself and keeps it in one folder of its own. It gets Python 3.11 and the packages through a small program called [uv](https://docs.astral.sh/uv).
 
-**On Windows:** download this repository (green **Code** button, then **Download ZIP**), unzip it, and double-click **`install-windows.bat`**. Type the pipelines you want (e.g. `bats`, or `birds bats`, or `all`) and press Enter.
+**Windows:** download this repository (green **Code** button, then **Download ZIP**), unzip it, and double-click **`install-windows.bat`**. Type what you want (e.g. `bats`, `birds bats`, `videos` or `all`) and press Enter.
 
-**On Mac, Linux or JASMIN:**
+**Mac, Linux or JASMIN:**
 
 ```bash
 git clone https://github.com/NERC-CEH/ceh-biomonitoring.git
 cd ceh-biomonitoring
-./install.sh                 # just uploading and reports
-./install.sh bats            # + bats       (or: birds, images, birds bats, or: all)
+./install.sh bats            # or: birds, images, videos, several (birds bats), or all; nothing = uploading and reports
 ```
 
-**From R:** `cehbio::cehbio_install("bats")` does the same: see [Using the toolkit from R](docs/r.md).
+**R:** see [Using R](#using-r).
 
-Then open a **new** terminal (on Windows, **Windows PowerShell** from the Start menu) and type `cehbio pipelines` to see what's installed. To add another pipeline later, run the installer again with its name.
+Then open a **new** terminal (on Windows, **Windows PowerShell** from the Start menu) and type `cehbio pipelines` to see what's installed. Run the installer again with another name to add it.
 
-> Everything goes in `%LOCALAPPDATA%\ceh-biomonitoring` (Windows) or `~/.local/share/ceh-biomonitoring` (Mac, Linux), or the folder in the `CEHBIO_HOME` environment variable. Your results go somewhere else (see below). Prefer conda? `./install.sh --conda bats` makes a conda environment called `ceh-biomonitoring`, as before.
-
-**Always on the newest models:** run `cehbio update` now and then. It gets the newest code, model lists, packages and models for every pipeline you have installed (BirdNET, Perch, BatDetect2 and the image models). `cehbio versions` shows what you're using, and every result records the exact versions that made it.
-
-> **On JASMIN:** install on a sci server (e.g. `ssh sci-vm-04`), not a login node. The installer works around JASMIN's small `/tmp` limit for you.
+- **Keep up to date:** `cehbio update` gets the newest code, models and packages. `cehbio versions` shows what you're using, and every result records the exact versions that made it.
+- **JASMIN:** install on a sci server (e.g. `ssh sci-vm-04`), not a login node.
+- **Where it goes:** `%LOCALAPPDATA%\ceh-biomonitoring` (Windows) or `~/.local/share/ceh-biomonitoring` (Mac, Linux), or the folder in `CEHBIO_HOME`. Prefer conda? `./install.sh --conda bats`.
 
 ## Start here
 
-**Prefer R?** Everything below can be done from R instead: see [Using the toolkit from R](docs/r.md).
+Type each command in a terminal (on Windows, **Windows PowerShell**). No coding is needed.
 
-
-You type each command into a terminal (on Windows, **Windows PowerShell**). No coding is needed.
-
-**1. Check everything is set up.**
-
-```bash
-cehbio check
-```
-
-This shows where your results will go, and whether anything is missing.
+**1. Check everything is set up.** `cehbio check` shows where your results will go, and whether anything is missing.
 
 **2. Try it on example data** (UK birds, UK bats, moth-trap photos). It says PASS or PROBLEM.
 
@@ -70,7 +106,7 @@ This shows where your results will go, and whether anything is missing.
 cehbio examples run bats        # or birds, images, all
 ```
 
-**3. Run it on your own data.** Start with 20 files:
+**3. Run it on your own data**, starting with 20 files:
 
 ```bash
 cehbio run bats --folder E:/my_recordings --project my-woods --deployment wood-1 --max-files 20
@@ -82,73 +118,57 @@ cehbio run bats --folder E:/my_recordings --project my-woods --deployment wood-1
 
 Remove `--max-files 20` to run on everything.
 
-**4. See how far it has got.**
+**4. Follow it:** `cehbio status` (or `cehbio status --watch` to keep checking).
 
-```bash
-cehbio status                   # every run: a progress bar, and roughly how long is left
-cehbio status --watch           # keep checking until it's finished
+**5. Open your results** in `ceh-biomonitoring-results/bats/my-woods/wood-1/` in your user folder. The `.csv` opens in Excel, and `READ ME.txt` says what each file is.
+
+**6. Next:** have them checked by experts ([Manual validation](docs/validation.md)), make a report ([Reporting](docs/reporting.md)) or a video ([Videos and soundscapes](docs/videos.md)).
+
+## Using R
+
+Everything above can be done from R, with the `cehbio` R package. You never need to write Python.
+
+```r
+install.packages("remotes")
+remotes::install_github("NERC-CEH/ceh-biomonitoring", subdir = "r")
+cehbio::cehbio_install("bats")          # fetches what it needs itself: no Miniforge, conda or Quarto to install
 ```
 
-**5. Open your results.** They're in your user folder, in `ceh-biomonitoring-results/bats/my-woods/wood-1/`. The `.csv` file opens in Excel, and `READ ME.txt` there says what each file is.
+**No Python at all for:**
+- uploading;
+- report tables and reports;
+- videos and soundscapes.
 
-**6. Have the results checked by experts.** See [Manual validation](docs/validation.md).
+Only running the models (`cehbio_run()`) uses Python, which `cehbio_install()` sets up for you.
+
+| | R |
+|---|---|
+| Send your data to UKCEH | `cehbio_deployments()`, `cehbio_request_deployment()`, `cehbio_upload()` |
+| Run the models and follow them | `cehbio_run()`, `cehbio_status()` |
+| Read the results | `read_results()`, `read_report_data()` |
+| Analysis and reporting | `cehbio_report_data()`, `cehbio_report()`, `plot_activity()` ..., `cehbio_weather_setup()` |
+| Visualisation | `cehbio_video()`, `cehbio_soundscape()` |
+| Anything else | `cehbio("validate", "collect", ...)`: any command |
+
+R and Python make the same report tables, numbers and words. An automatic check compares them on every change. Full guide: [Using the toolkit from R](docs/r.md).
 
 ## Your results folder
 
-Each kind of result has its own folder, so birds, bats, images and labelling never get mixed up:
+Each kind of result has its own folder, so birds, bats, images and expert checks never get mixed up:
 
 ```
 ceh-biomonitoring-results/          in your user folder (cehbio check shows where)
     birds/  bats/  images/          one folder per pipeline
         my-woods/                   one folder per project
             wood-1/                 one folder per deployment: results, READ ME.txt, PROGRESS.txt
-                videos/             cehbio video and cehbio soundscape put their videos here
+                videos/             videos and soundscapes
                 working/            the pipeline's own files: you don't need to open these
+            report/                 report tables, reports
     labelling/                      expert checks, in steps: 1_sample, 2_for_experts, 3_answers
     examples/   upload_logs/
 ```
 
 More in [Running and results](docs/running.md#your-results-folder): what each file holds, choosing another folder, and moving results from before November 2026 (`cehbio tidy`).
-
-## Guides
-
-Read them in this order:
-
-1. [Recorders and file names](docs/recorders.md): so every result gets its date and time
-2. the guide for your pipeline: [Birds](docs/birds.md), [Bats](docs/bats.md) or [Images](docs/images.md)
-3. [Running and results](docs/running.md): big jobs, computing clusters, following a run, where everything goes
-4. [Manual validation](docs/validation.md) and [Sampling methods](docs/sampling-methods.md): expert checks
-5. [Reporting](docs/reporting.md): summary reports and report-ready tables, with weather and the moon
-6. [Videos and soundscapes](docs/videos.md): to share what was found
-7. [Using the toolkit from R](docs/r.md): everything from R, from installing to reports
-8. For sending data to UKCEH: [Setting up your sites](docs/setting-up-sites.md) and the [Upload guide](docs/upload-guide.md)
-
-**Words used in the guides:**
-
-| Word | Meaning |
-|---|---|
-| **pipeline** | one kind of analysis: birds, bats or images |
-| **deployment** | one recorder or trap, at one place, over one period |
-| **project** | a set of deployments that belong together; their results share a folder |
-| **part** (or chunk) | about 100 files, processed together. A cluster runs many parts at once |
-| **cluster** | a group of shared computers, e.g. JASMIN, where long jobs run while you do something else |
-| **bucket** | a folder in an online object store, where data uploaded to UKCEH is kept |
-
-## What's in this repository
-
-You only need the guides. The rest is there for the toolkit itself.
-
-| Folder or file | What it is |
-|---|---|
-| `docs/` | the guides |
-| `examples/` | small open example data sets, with credits |
-| `credentials/` | an *example* credentials file. Your real one goes in `~/.config/ceh-biomonitoring/`, never here |
-| `install.sh`, `environment.yml`, `pyproject.toml` | the installer and what it installs |
-| `src/` | the code (Python) |
-| `r/` | the `cehbio` R package: the toolkit from R ([guide](docs/r.md)) |
-| `tests/` | checks that the code still works, for developers |
-
-Your results are never saved in here: they go in your results folder.
 
 ## Models, licences and acknowledgements
 
@@ -166,20 +186,39 @@ This toolkit runs models made by other teams. **Check each model's licence befor
 
 > ⚠️ The image models are **still in development and far from perfect**: treat their results as suggestions, and have identifications checked by an expert.
 
-**Keeping up to date:** the newest version of each model is always used. Run `cehbio update` now and then; `cehbio versions` and `cehbio models` show what you're using. Older image models stay available by name to reproduce past results.
+The newest version of each model is always used; older image models stay available by name to reproduce past results (`cehbio models`).
 
-**Acknowledgements.** The images pipeline's processing builds on [amber-inferences](https://github.com/AMI-system/amber-inferences) (MIT) from the AMI system team, and on the AMBER and INSPIRE projects. Manual validation packages crops for [Mothbot](https://mothbot-classify.vercel.app) (Digital Naturalism Laboratories) and groups similar crops with [DINOv2](https://github.com/facebookresearch/dinov2) (Meta, Apache 2.0); its species lists come from [GBIF](https://www.gbif.org) on the [GBIF Backbone Taxonomy](https://doi.org/10.15468/39omei). We thank all the teams above for making their models and code openly available.
+**Acknowledgements.** The images pipeline's processing builds on [amber-inferences](https://github.com/AMI-system/amber-inferences) (MIT) from the AMI system team, and on the AMBER and INSPIRE projects. Manual validation packages crops for [Mothbot](https://mothbot-classify.vercel.app) (Digital Naturalism Laboratories) and groups similar crops with [DINOv2](https://github.com/facebookresearch/dinov2) (Meta, Apache 2.0); its species lists come from [GBIF](https://www.gbif.org) on the [GBIF Backbone Taxonomy](https://doi.org/10.15468/39omei). Weather comes from [Open-Meteo](https://open-meteo.com) and Copernicus [ERA5-Land](https://cds.climate.copernicus.eu). We thank all these teams for making their models, code and data openly available.
 
-## Getting help
+## Help
 
 Run any command with `--help`, e.g. `cehbio run birds --help`. `cehbio check` shows your settings and anything missing.
 
 For questions about uploading data to UKCEH, contact **Alyssa Duffy** at [alyduf@ceh.ac.uk](mailto:alyduf@ceh.ac.uk). Problems with the code: please open an issue.
 
-## Licence
+### Words used in the guides
 
-The code is MIT-licensed (see [LICENSE](LICENSE)). The models have their own licences, above.
+| Word | Meaning |
+|---|---|
+| **pipeline** | one kind of analysis: birds, bats or images |
+| **deployment** | one recorder or trap, at one place, over one period |
+| **project** | a set of deployments that belong together; their results share a folder |
+| **part** (or chunk) | about 100 files, processed together. A cluster runs many parts at once |
+| **cluster** | a group of shared computers, e.g. JASMIN, where long jobs run while you do something else |
+| **bucket** | a folder in an online object store, where data uploaded to UKCEH is kept |
 
-## For developers
+### What's in this repository
 
-See [docs/developers.md](docs/developers.md): adding a pipeline, plug-ins and tests.
+You only need the guides. The rest is there for the toolkit itself. Your results are never saved in here.
+
+| Folder or file | What it is |
+|---|---|
+| `docs/` | the guides |
+| `install-windows.bat`, `install.sh`, `install.ps1` | the installers |
+| `src/` | the toolkit (Python) |
+| `r/` | the `cehbio` R package |
+| `examples/` | small open example data sets, with credits |
+| `credentials/` | an *example* credentials file. Your real one goes in `~/.config/ceh-biomonitoring/`, never here |
+| `tests/` | checks that the code still works |
+
+**Licence:** the code is MIT-licensed ([LICENSE](LICENSE)); the models have their own licences, above. **Developers:** [docs/developers.md](docs/developers.md) covers adding a pipeline, plug-ins, tests, and keeping the Python and R versions in step.
