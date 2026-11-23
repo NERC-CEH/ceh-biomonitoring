@@ -10,7 +10,7 @@ Finds insects in photos from automated light traps, such as **AMI traps** and **
 2. **Leaves out known clutter**: the [ring light](#ring-lights-found-for-you-every-night) of LepiSense and AMI-mini units (found in the photos), your [mask](#masks-other-things-always-in-view) and your [own filters](#your-own-filters-eg-geckos).
 3. **Keeps the best boxes**, at most `max_crops_per_image` (default 100) per photo, by detector score. Photos with more, e.g. during a beetle emergence, record how many were left out.
 4. **Moth or not:** `moth-vs-nonmoth-v1`.
-5. **Order:** `insect-order-v1`, 16 groups, e.g. *Lepidoptera Macros*, *Coleoptera*, *Diptera Tipulidae*, *Vegetation*.
+5. **Order:** `insect-order-v2`, 16 groups, e.g. *Lepidoptera Macros*, *Coleoptera*, *Diptera Tipulidae*, *Vegetation*.
 6. **Species:** your region's species model, for moths and Lepidoptera only. It gives the top 5 guesses with scores.
 7. **Tracking:** each insect's best match in the previous photo, joined into tracks when the results are combined.
 
@@ -253,4 +253,4 @@ The main columns:
 
 The models, who made them, their licences and what to cite are listed on the [front page](../README.md#models-licences-and-acknowledgements). The **moth species models are non-commercial only** (CC BY-NC 4.0).
 
-Earlier models used for AMBER / INSPIRE results up to 2026 stay available by name (`insect-detector-flatbug-m`, `moth-vs-nonmoth-v1`, `insect-order-v1`; add `--set order_input=amber-300` to match the old order results exactly).
+Earlier models used for AMBER / INSPIRE results up to 2026 stay available by name (`insect-detector-flatbug-m`, `moth-vs-nonmoth-v1`). The earlier order model (`insect-order-v1`, 6 May 2024) is no longer offered: its licence for sharing isn't settled. `--set order_input=amber-300` still gives the old way of preparing crops for the order model.

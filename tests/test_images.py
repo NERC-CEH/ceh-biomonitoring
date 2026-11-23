@@ -167,7 +167,7 @@ def test_newest_model_is_the_default():
     from ceh_biomonitoring.pipelines.images import latest, resolve
     assert latest("detector") == "insect-detector-flatbug-m-v2"
     assert latest("order") == "insect-order-v2" and latest("binary") == "moth-vs-nonmoth-v2"
-    assert resolve("latest", "order") == "insect-order-v2" and resolve("insect-order-v1", "order") == "insect-order-v1"
+    assert resolve("latest", "order") == "insect-order-v2" and resolve("insect-order-v2", "order") == "insect-order-v2"
     ml = {"models": {"a-v1": {"stage": "species", "region": "x", "released": "2024-01-01"},
                      "a-v10": {"stage": "species", "region": "x", "released": "2026-01-01"},
                      "a-v9": {"stage": "species", "region": "x", "released": "2025-01-01"}}}

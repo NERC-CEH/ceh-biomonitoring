@@ -8,7 +8,7 @@ For each photo, in time order through each night:
   2. ignore known clutter    mask (e.g. a ring light) and your own filters (e.g. geckos)
   3. keep the best boxes     at most max_crops_per_image, by detector score (the rest are counted)
   4. moth or not             moth-vs-nonmoth-v1
-  5. which order             insect-order-v1 (16 groups, e.g. Lepidoptera Macros, Coleoptera)
+  5. which order             insect-order-v2 (16 groups, e.g. Lepidoptera Macros, Coleoptera)
   6. which species           the region's species model, for moths / Lepidoptera only (top_n guesses)
   7. tracking                each crop's best match in the previous photo; joined into tracks when
                              everything is combined (<deployment>_analysis_ready / _tracks)

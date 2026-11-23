@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+**Models**
+- The earlier insect-order model (`insect-order-v1`, 6 May 2024) is no longer offered; `insect-order-v2` (Bjerge et al., 10 May 2024) is the only one.
+
 **Videos and soundscapes**
 - `cehbio video`: a light trap's night as a video, every insect boxed, moths named with their scores, tracks with trails; `--individuals` follows insects close up. `cehbio soundscape birds|bats`: each species' best moment with its sound and a moving spectrogram, detections marked (bats slowed ten times), and the day at a glance. Encoded with PyAV inside Python, because managed laptops block ffmpeg.exe. Install with the `videos` extra.
 

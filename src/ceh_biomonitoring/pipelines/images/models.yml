@@ -88,21 +88,6 @@ models:
                sha256: 4bcceca7ecbb1fcfa192be6cc285a857ed0de4497db1855d5b7a3287f9fa77fe,
                url: "https://raw.githubusercontent.com/kimbjerge/MCC24-trap/main/model_order_100524/thresholdsTestTrain.csv"}
 
-  insect-order-v1:
-    stage: order
-    title: Insect order (ResNet-50, 16 groups), 6 May 2024 (used for AMBER / INSPIRE outputs to 2026)
-    by: Aarhus University (Bjerge et al. 2025, Remote Sensing in Ecology and Conservation)
-    released: 2024-05-06
-    source: https://github.com/kimbjerge/MCC24-trap (model_order_060524)
-    licence: see source (repository is GPL-3.0)
-    files:
-      weights: {name: dhc_best_128.pth, asset: insect-order-v1.pth, bytes: 98583101,
-                sha256: ff7f2145e3a49c20cb675878b75bf4a27ea1aee3f9971259b6fce72a5b1e4ef6,
-                url: "https://raw.githubusercontent.com/kimbjerge/MCC24-trap/main/model_order_060524/dhc_best_128.pth"}
-      labels: {name: thresholdsTestTrain.csv, asset: insect-order-v1.thresholds.csv, bytes: 992,
-               sha256: 9080ff88fde54e25d207ecaedecc0cbd37a4d5d5cf40c8287fc6a5570bfa2a78,
-               url: "https://raw.githubusercontent.com/kimbjerge/MCC24-trap/main/model_order_060524/thresholdsTestTrain.csv"}
-
   # ------------------------------------------------------------------ species (one per region)
   # Trained by The Alan Turing Institute and UKCEH for AMBER (publicly funded). Licence: CC BY-NC 4.0, research and
   # other non-commercial use only.
