@@ -188,7 +188,8 @@ def add_command(sub, common) -> None:
     q.add_argument("--platform", choices=list(PLATFORMS), help="default: audio-clips (birds, bats), mothbot (images)")
     q.add_argument("--out", help="folder for the package(s), if not using --project")
     q.add_argument("--bucket", help="object-store bucket the recordings or photos are in, if the results don't say")
-    q.add_argument("--source-root", help="a folder holding the recordings or photos (searched by file name)")
+    q.add_argument("--source-root", nargs="+", help="folders holding the recordings or photos, if they aren't where "
+                                                    "the results say (searched by file name), e.g. hard drives")
     q.add_argument("--blind", dest="blind", action="store_true", default=None,
                    help="hide the models' identifications from the expert (default: audio model selections, and "
                         "all Mothbot packages; --no-blind shows them)")

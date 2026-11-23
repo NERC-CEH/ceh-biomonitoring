@@ -15,7 +15,7 @@ from pathlib import Path
 
 import pandas as pd
 
-# UKCEH house style (the same values as the UKCEH and partner reports, theme_report.R)
+# UKCEH house style (the same colours and font as UKCEH's other report templates)
 STYLE = {"font": "Arial", "ink": "#000000", "ink_2": "#4d4d4d", "grid": "#e3e3e3", "surface": "#ffffff",
          "mint": "#D6EAE6", "neutral": "#bdbdbd", "main": "#133b64",
          "categorical": ["#133b64", "#f4c03d", "#477AE2", "#e76124", "#67ccea", "#7f1518", "#4db264", "#cfbcd5"]}

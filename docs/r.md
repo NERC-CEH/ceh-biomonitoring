@@ -15,8 +15,6 @@ cehbio_install(c("bats", "reports"))     # the pipelines you want: birds, bats, 
 
 `cehbio_install()` makes a conda environment called `ceh-biomonitoring` and installs the toolkit into it. Run it again with other pipelines to add them.
 
-While the repository is private, `install_github` needs a GitHub token (`auth_token = ...`). Ask in the team.
-
 ## Run, follow, read
 
 ```r

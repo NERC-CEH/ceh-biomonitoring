@@ -3,7 +3,7 @@ the object store, with your own credentials (credentials_file in your settings),
 
 Where a file is looked for, in order:
   1. the path in the results, if it exists on this machine
-  2. --source-root: a folder holding copies (searched by file name), e.g. a hard drive of a deployment
+  2. --source-root: one or more folders holding copies (searched by file name), e.g. hard drives
   3. the object store: the results' own key, in the bucket from --bucket, the results (bucket_name), or
      the country table (country_folder -> bucket). Results whose path is a file on another machine (for
      example a temporary download folder) are found at <deployment>/<data type>/<file name>, the layout
@@ -23,9 +23,11 @@ from .units import GROUPS
 class Media:
     """Use as:  with Media(settings, group, bucket, source_root) as m:  path = m.get(row)"""
 
-    def __init__(self, settings, group: str, bucket: str | None = None, source_root: str | None = None):
+    def __init__(self, settings, group: str, bucket: str | None = None, source_root=None):
+        """source_root: a folder, or several (e.g. hard drives), searched by file name."""
         self.settings, self.group, self.bucket = settings, group, bucket
-        self.roots = [Path(source_root)] if source_root else []
+        roots = [source_root] if isinstance(source_root, (str, Path)) else list(source_root or [])
+        self.roots = [Path(r) for r in roots]
         self._index: dict[str, Path] | None = None
         self._s3 = None
         self._buckets: dict[str, str] | None = None

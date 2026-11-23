@@ -475,3 +475,17 @@ def test_bat_clips_get_spectrograms_slowed_copies_and_a_page(tmp_path):
     assert res["page"].endswith("index.html") and "slowed" in page and "spectrograms/" in page
     sheet = pd.read_csv(res["sheet"])
     assert sheet["spectrogram"].notna().all()
+
+
+def test_media_finds_files_in_several_local_folders(tmp_path):
+    from ceh_biomonitoring.validation.media import Media
+    a, b = tmp_path / "driveA", tmp_path / "driveB" / "night1"
+    a.mkdir(); b.mkdir(parents=True)
+    (b / "photo_2.jpg").write_bytes(b"x")
+    here = a / "photo_1.jpg"
+    here.write_bytes(b"x")
+    with Media(None, "images", source_root=[str(a), str(tmp_path / "driveB")]) as m:
+        assert m.get({"image_path": str(here)}) == here                                     # where the results say
+        assert m.get({"image_path": "/elsewhere/photo_2.jpg"}) == b / "photo_2.jpg"         # found by name
+        with pytest.raises(FileNotFoundError, match="source-root"):
+            m.get({"image_path": "/elsewhere/missing.jpg", "bucket": "local"})

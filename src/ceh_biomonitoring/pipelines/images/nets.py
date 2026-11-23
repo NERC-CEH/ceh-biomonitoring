@@ -128,7 +128,7 @@ def load_flatbug(weights, device, score_threshold=None, min_size=None, precision
     """flat-bug, optionally tuned: score_threshold (flat-bug's own cut-off, default 0.2), min_size
     (smallest insect it reports, as the square root of its box area in pixels; flat-bug's default is 32)
     and precision. float32 is the default: half precision (float16) is faster on a GPU but was seen to
-    lose faint insects in UKCEH tests (UKCEH, 2026). float16 is only allowed on a GPU."""
+    lose faint insects in UKCEH tests (2026). float16 is only allowed on a GPU."""
     from flat_bug.predictor import Predictor
     dtype = "float16" if (precision == "float16" and str(device).startswith("cuda")) else "float32"
     p = Predictor(model=str(weights), device=device, dtype=dtype)

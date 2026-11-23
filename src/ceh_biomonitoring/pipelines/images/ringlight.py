@@ -19,8 +19,8 @@ Each night's ring is written to <deployment>_ring_light.json, and <deployment>_r
 shows the masks on up to 12 nights. Correct the JSON if a night is wrong and run again with
 `--set ring_light=<that file>`. `cehbio mask rings --image <photos>` tries it on photos before a run.
 
-These rules were set on the Farm 1 LepiSense units (2026: 182 of 185 nights found directly) and
-checked by eye there. Look at the preview for your own units.
+These rules were set and checked by eye on UKCEH LepiSense deployments in 2026 (182 of 185 nights
+found directly). Look at the preview for your own units.
 """
 from __future__ import annotations
 

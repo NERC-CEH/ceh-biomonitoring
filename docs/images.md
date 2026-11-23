@@ -100,7 +100,7 @@ cehbio mask rings --image E:/trap_photos/night1 --out ring_check.jpg
 
 Every photo records how many boxes were on the ring (`n_boxes_ring_light`). `--set ring_light_action=flag` keeps them instead, marked `ring light`, `light board` or `screw` in the `masked_as` column. Labelling always leaves them out. `--set ring_light=""` switches it off.
 
-The rules were set and checked by eye on the Farm 1 LepiSense units in 2026, where the ring was found directly on 182 of 185 nights. Look at the preview for your own units.
+The rules were set and checked by eye on UKCEH LepiSense deployments in 2026, where the ring was found directly on 182 of 185 nights. Look at the preview for your own units.
 
 ## Masks: other things always in view
 

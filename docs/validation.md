@@ -10,7 +10,7 @@ The models make mistakes, so results should be checked by experts. `cehbio valid
 
 Sampling and packaging are separate, so the rules for choosing what to check stay the same whichever platform is used. A selection is a plain CSV, one row per item.
 
-Everything runs on your own computer, JASMIN, Polar or any other cluster. Files are read from disk when they're there, otherwise from the object store with your own credentials ([Running](running.md)). Add `--slurm` to `sample` or `prepare` to run it as a batch job.
+Everything runs on your own computer, JASMIN, Polar or any other cluster. Recordings and photos can be in a **local folder** or in an object store. Each is looked for at the path in the results first (so results from `cehbio run --folder` just work), then under `--source-root <folder>` (searched by file name: a hard drive of copies, or files that have moved), and only then in the object store, with your own credentials ([Running](running.md)). Add `--slurm` to `sample` or `prepare` to run it as a batch job.
 
 ```bash
 pip install -e ".[validation]"        # or ./install.sh validation: Mothbot packages and audio clips
