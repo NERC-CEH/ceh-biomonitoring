@@ -13,7 +13,8 @@ Tools from the UK Centre for Ecology & Hydrology (UKCEH) for biodiversity monito
 | Bats in ultrasonic recordings | **BatDetect2** | `cehbio run bats` | [Bats](docs/bats.md) |
 | Moths and other insects in light-trap images | insect detection, moth/non-moth, order and regional species models for AMI traps and LepiSense | `cehbio run images` | [Images](docs/images.md) |
 | Expert checks of the results (birds, bats, images) | fair samples for experts, packaged as audio clips or for the [Mothbot](https://mothbot-classify.vercel.app) labelling site, and their answers read back | `cehbio validate` | [Manual validation](docs/validation.md), [Sampling methods](docs/sampling-methods.md) |
-| Summary reports, and tables ready for Python or R, with weather and the moon | weather from Open-Meteo or ERA5-Land; works with EntoInsights | `cehbio report` | [Reporting](docs/reporting.md) |
+| Analysis-ready tables: nights with weather and the moon, individuals, species | weather from Open-Meteo or ERA5-Land; works with EntoInsights | `cehbio report-data` | [Reporting](docs/reporting.md#the-tables) |
+| Summary reports per deployment and project, in HTML, Word and PDF | | `cehbio report` | [Reporting](docs/reporting.md) |
 | Everything from R | the `cehbio` R package | `cehbio_run()`, `cehbio_report()` ... | [From R](docs/r.md) |
 
 You only install what you need. Everything shares one environment, called `ceh-biomonitoring`.
