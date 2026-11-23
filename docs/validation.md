@@ -93,7 +93,7 @@ cehbio validate sample bats --for site-lists results/barn-1 --out sel/barn-1
 cehbio validate prepare sel/barn-1.csv --out to_expert/barn-1
 ```
 
-Birds get a 30 s clip centred on the strongest detection (`--clip-seconds`). Bats get the whole pass with 1 s either side (`--pad-seconds`), at the recording's own sample rate, ready for bat software. The spreadsheet says where in the clip the model detected the species. Model samples are **blind**: the expert writes what they hear, and the model's labels go in `model_labels_KEY_do_not_send.csv`.
+Birds get a 30 s clip centred on the strongest detection (`--clip-seconds`). Bats get the whole pass with 1 s either side (`--pad-seconds`), at the recording's own sample rate, ready for bat software. The spreadsheet says where in the clip the model detected the species. Model samples are **blind**: the expert writes what they hear, and the model's labels go in `model_labels_KEY_do_not_send.csv`. Other samples show the model's name: the expert marks it correct (Y/N/?), and where it's wrong writes what it is in **if not, what is it**, if they can tell. `collect` reads that as the expert's identification.
 
 Each package also has:
 

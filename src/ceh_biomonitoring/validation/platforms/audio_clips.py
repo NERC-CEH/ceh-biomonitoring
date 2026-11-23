@@ -53,7 +53,8 @@ def prepare(sel: pd.DataFrame, out: Path, settings=None, blind: bool | None = No
                 row = {"clip_id": p.selection_id, "clip_file": f"clips/{fname}", "site": p.site, "period": p.period}
                 if not blind:
                     row.update(species=p.species, english_name=eng, why=p.why, score=round(float(p.score), 3))
-                row.update({"detected_in_clip": "", **({"what_you_hear": ""} if blind else {"correct (Y/N/?)": ""}),
+                row.update({"detected_in_clip": "", **({"what_you_hear": ""} if blind else
+                                                          {"correct (Y/N/?)": "", "if not, what is it": ""}),
                             "notes": ""})
                 try:
                     if src is None:

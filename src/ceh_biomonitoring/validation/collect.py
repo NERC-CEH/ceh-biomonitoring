@@ -84,4 +84,8 @@ def audio(sheet: Path, key: Path | None = None) -> pd.DataFrame:
         v = s[col].astype(str).str.strip().str.upper().str[:1]
         s["agrees"] = v.map({"Y": True, "N": False})
         s["expert_label"] = s[col]
+        fix = next((c for c in s.columns if c.startswith("if not")), None)
+        if fix:                                   # the expert's own identification, where the model was wrong
+            named = s[fix].notna() & s[fix].astype(str).str.strip().ne("")
+            s.loc[named, "expert_label"] = s.loc[named, fix].astype(str).str.strip()
     return s.rename(columns={"clip_id": "selection_id"})
