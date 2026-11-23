@@ -6,6 +6,9 @@
 # It gets uv (a small program that fetches Python and packages), which gets Python 3.11, and puts
 # everything in %LOCALAPPDATA%\ceh-biomonitoring (or $env:CEHBIO_HOME). The `cehbio` command then works in
 # any new terminal. R users can do the same from R with cehbio::cehbio_install(): it uses the same folder.
+#
+# In the UKCEH partner upload pack, the upload tool (a .whl file) sits beside this script: then only the
+# upload tool is installed, from that file.
 param([Parameter(ValueFromRemainingArguments = $true)] [string[]] $Pipelines)
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
@@ -20,6 +23,7 @@ New-Item -ItemType Directory -Force (Join-Path $Home_ "uv") | Out-Null
 $env:UV_PYTHON_INSTALL_DIR = Join-Path $Home_ "python"
 $env:UV_NO_MODIFY_PATH = "1"
 $env:UV_PYTHON_PREFERENCE = "only-managed"
+$env:UV_LINK_MODE = "copy"
 $env:UV_NATIVE_TLS = "1"                       # Windows' own certificates: works behind organisation networks
 
 $Uv = Join-Path $Home_ "uv\uv.exe"
@@ -49,15 +53,21 @@ if (-not (Test-Path $Py)) {
     if ($LASTEXITCODE -ne 0) { throw "The Python environment wasn't made: see the messages above." }
 }
 
-# from this folder if it's a copy of the repository, otherwise the newest on GitHub
+# the partner pack's upload tool, else this folder if it's a copy of the repository, else the newest on GitHub
 $Here = Split-Path -Parent $MyInvocation.MyCommand.Path
+$Wheel = Get-ChildItem $Here -Filter "ceh_biomonitoring-*.whl" -ErrorAction SilentlyContinue | Sort-Object Name | Select-Object -Last 1
+$UploadOnly = [bool]$Wheel
 $Source = @("ceh-biomonitoring[$Extras] @ https://github.com/NERC-CEH/ceh-biomonitoring/archive/refs/heads/main.zip")
-if ($Here -and (Test-Path (Join-Path $Here "pyproject.toml"))) { $Source = @("$Here[$Extras]") }      # a copy, so the downloaded folder can be deleted afterwards
-Write-Host "Installing: $Extras (the first time takes a while: the models' packages are large)"
+if ($UploadOnly) { $Source = @($Wheel.FullName) }
+elseif ($Here -and (Test-Path (Join-Path $Here "pyproject.toml"))) { $Source = @("$Here[$Extras]") }      # a copy, so the downloaded folder can be deleted afterwards
+if ($UploadOnly) { Write-Host "Installing the upload tool ..." }
+else { Write-Host "Installing: $Extras (the first time takes a while: the models' packages are large)" }
 & $Uv pip install --python $Py --upgrade @Source
 if ($LASTEXITCODE -ne 0) { throw "The install didn't finish: see the messages above, then run it again." }
-& $Py -m ceh_biomonitoring.reporting.getquarto | Out-Null
-if ($LASTEXITCODE -ne 0) { Write-Host "(Quarto, for Word and PDF reports, will be fetched when first needed)" }
+if (-not $UploadOnly) {
+    & $Py -m ceh_biomonitoring.reporting.getquarto | Out-Null
+    if ($LASTEXITCODE -ne 0) { Write-Host "(Quarto, for Word and PDF reports, will be fetched when first needed)" }
+}
 
 # the `cehbio` command, in your own PATH (no admin rights needed)
 if (-not $env:CEHBIO_NO_COMMAND) {
@@ -72,5 +82,10 @@ if (-not $env:CEHBIO_NO_COMMAND) {
 }
 
 Write-Host ""
-& $Py -m ceh_biomonitoring.cli pipelines
-Write-Host "Done. Open a NEW terminal (e.g. Windows PowerShell) and try:  cehbio check"
+if ($UploadOnly) {
+    Write-Host "Done. The upload tool is installed."
+    Write-Host "To upload: open Windows PowerShell from the Start menu (a NEW window) and type:  cehbio upload"
+} else {
+    & $Py -m ceh_biomonitoring.cli pipelines
+    Write-Host "Done. Open a NEW terminal (e.g. Windows PowerShell) and try:  cehbio check"
+}

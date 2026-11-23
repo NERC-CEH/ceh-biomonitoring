@@ -32,7 +32,6 @@ Every upload goes to one deployment, so that UKCEH always knows exactly where an
 You need the [upload tool installed](upload-guide.md#part-1-set-up-once) and your upload username and password.
 
 ```
-conda activate ceh-biomonitoring
 cehbio deployments request
 ```
 

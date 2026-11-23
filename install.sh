@@ -45,7 +45,7 @@ fi
 
 CEHBIO_HOME="${CEHBIO_HOME:-${XDG_DATA_HOME:-$HOME/.local/share}/ceh-biomonitoring}"
 mkdir -p "$CEHBIO_HOME/uv"
-export UV_PYTHON_INSTALL_DIR="$CEHBIO_HOME/python" UV_NO_MODIFY_PATH=1 UV_PYTHON_PREFERENCE=only-managed
+export UV_PYTHON_INSTALL_DIR="$CEHBIO_HOME/python" UV_NO_MODIFY_PATH=1 UV_PYTHON_PREFERENCE=only-managed UV_LINK_MODE=copy
 
 UV="$CEHBIO_HOME/uv/uv"
 if [[ ! -x "$UV" ]]; then
@@ -71,9 +71,16 @@ if [[ ! -x "$PY" ]]; then
   echo "Making the toolkit's Python environment (once) ..."
   "$UV" venv --seed --python 3.11 "$ENV"
 fi
-echo "Installing: $EXTRAS (the first time takes a while: the models' packages are large)"
-"$UV" pip install --python "$PY" --upgrade -e "$HERE[$EXTRAS]"
-"$PY" -m ceh_biomonitoring.reporting.getquarto >/dev/null || echo "(Quarto, for Word and PDF reports, will be fetched when first needed)"
+# the partner pack's upload tool (a .whl beside this script), else this copy of the repository
+WHEEL="$(ls "$HERE"/ceh_biomonitoring-*.whl 2>/dev/null | tail -1 || true)"
+if [[ -n "$WHEEL" ]]; then
+  echo "Installing the upload tool ..."
+  "$UV" pip install --python "$PY" --upgrade "$WHEEL"
+else
+  echo "Installing: $EXTRAS (the first time takes a while: the models' packages are large)"
+  "$UV" pip install --python "$PY" --upgrade -e "$HERE[$EXTRAS]"
+  "$PY" -m ceh_biomonitoring.reporting.getquarto >/dev/null || echo "(Quarto, for Word and PDF reports, will be fetched when first needed)"
+fi
 
 # the `cehbio` command, for every new terminal
 BIN="$HOME/.local/bin"
@@ -82,6 +89,16 @@ printf '#!/bin/sh\nexec "%s" -m ceh_biomonitoring "$@"\n' "$PY" > "$BIN/cehbio"
 chmod +x "$BIN/cehbio"
 
 echo
+if [[ -n "$WHEEL" ]]; then
+  # make sure new Terminal windows find `cehbio` (Mac: zsh; Linux: bash)
+  for rc in "$HOME/.zshrc" "$HOME/.bashrc"; do
+    if [[ -f "$rc" || "$rc" == "$HOME/.zshrc" && "$(uname -s)" == Darwin ]] && ! grep -qs '.local/bin' "$rc"; then
+      echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$rc"
+    fi
+  done
+  echo "Done. The upload tool is installed. To upload: open a NEW Terminal window and type:  cehbio upload"
+  exit 0
+fi
 "$PY" -m ceh_biomonitoring.cli pipelines
 case ":$PATH:" in
   *":$BIN:"*) echo "Done. Try:  cehbio check" ;;

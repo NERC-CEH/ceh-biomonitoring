@@ -54,7 +54,8 @@ cehbio_home <- function() {
 
 .uv_env <- function() {
   home <- cehbio_home()
-  v <- c(UV_PYTHON_INSTALL_DIR = file.path(home, "python"), UV_NO_MODIFY_PATH = "1", UV_PYTHON_PREFERENCE = "only-managed")
+  v <- c(UV_PYTHON_INSTALL_DIR = file.path(home, "python"), UV_NO_MODIFY_PATH = "1", UV_PYTHON_PREFERENCE = "only-managed",
+         UV_LINK_MODE = "copy")
   if (.win()) v <- c(v, UV_NATIVE_TLS = "1")          # use Windows' own certificates (works behind UKCEH's network)
   if (!.win() && dir.exists("/gws")) {                  # JASMIN: /tmp is too small for PyTorch and TensorFlow
     tmp <- file.path("/var/tmp", Sys.getenv("USER"), "cehbio-install")
