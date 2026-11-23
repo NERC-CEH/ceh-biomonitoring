@@ -5,13 +5,16 @@ Authors@R: person("Alyssa", "Duffy", email = "alyduf@ceh.ac.uk", role = c("aut",
 Description: Use the UKCEH ceh-biomonitoring toolkit entirely from R: install it, run the bird, bat
     and moth-trap pipelines, follow their progress, read the results, and make summary reports. The
     models themselves run in the toolkit's Python environment, which this package sets up and drives,
-    so R users never need to write Python. Reports are made from the same tables as the toolkit's own
-    Python reports, so both give the same numbers.
+    so R users never need to write Python. The report tables and reports are made in R, with no Python
+    needed, by the same rules as the toolkit's Python reports, so both give the same numbers.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Depends: R (>= 4.1)
 Imports:
     jsonlite,
+    nanoparquet,
+    digest,
+    curl,
     utils,
     stats,
     tools
@@ -19,7 +22,7 @@ Suggests:
     ggplot2,
     quarto,
     knitr,
-    arrow,
+    yaml,
     EntoInsights,
     testthat (>= 3.0.0)
 Config/testthat/edition: 3

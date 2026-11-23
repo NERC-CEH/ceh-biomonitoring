@@ -49,6 +49,10 @@ pytest
 
 They need no key and no models.
 
+## Reporting in Python and in R
+
+The report tables are made twice, on purpose: `src/ceh_biomonitoring/reporting/data.py` (with `validation/units.py`, `times.py`, `clockcheck.py`, `reporting/sky.py`, `weather.py`, `text.py`, `entoinsights.py`) and its R twin in `r/R/` (`report_data.R`, `units.R`, `times.R`, `clock.R`, `sky.R`, `weather.R`, `text.R`), so R users need no Python. **Change both together.** `tests/test_r_matches_python.py` runs both on the same results (images with tracks, birds, bats, a clock change, the clock check, live weather) and fails if any table or sentence differs; it runs on GitHub with every push.
+
 ## Line endings
 
 `.gitattributes` keeps every text file in LF, so shell scripts work on JASMIN even when edited on Windows.

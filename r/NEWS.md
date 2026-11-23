@@ -1,5 +1,9 @@
 # cehbio 0.3.0
 
+- The report tables are made in R (`cehbio_report_data()`), with no Python: the same tables, numbers and
+  words as Python's `cehbio report-data`, checked by a test. `engine = "python"` uses Python instead.
+  Reports from R need no Python at all; `cehbio_install("reports")` installs no Python.
+- Reads .parquet with nanoparquet (small, no other dependencies) instead of arrow.
 - `cehbio_install()` needs nothing installed first: it gets uv, which gets Python 3.11, and installs the
   toolkit into its own folder (`cehbio_home()`); it also gets Quarto and the R packages reports use, and
   makes the `cehbio` terminal command. No Miniforge, conda or admin rights. Old conda installs still work.

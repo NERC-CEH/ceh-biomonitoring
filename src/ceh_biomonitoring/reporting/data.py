@@ -20,6 +20,9 @@ an offset like +08:00), and start and end (the dates the unit went out and came 
 such as set-up tests, are kept in the nights table but marked in_deployment = False and left out of
 individuals, species and the totals). With no clock given, `cehbio clock-check` decides where it can; otherwise local
 time is assumed, and about.json says so.
+
+R twin: r/R/report_data.R (with units.R, times.R, sky.R, clock.R, weather.R and text.R) makes the same
+tables in R with no Python. Change both together: tests/test_r_matches_python.py checks they agree.
 """
 from __future__ import annotations
 
@@ -131,7 +134,7 @@ def individuals(run_root: Path, group: str) -> pd.DataFrame:
         return pd.DataFrame()
     if u.empty:
         return pd.DataFrame()
-    u = u.sort_values("score", ascending=False).drop_duplicates("unit_id")      # one name per individual
+    u = u.sort_values("score", ascending=False, kind="stable").drop_duplicates("unit_id")      # one name per individual
     out = pd.DataFrame({
         "deployment_id": u["deployment_id"].astype(str), "unit_id": u["unit_id"].astype(str),
         "when": pd.to_datetime(u["when"], errors="coerce"),

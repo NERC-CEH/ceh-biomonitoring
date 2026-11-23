@@ -11,16 +11,15 @@ cehbio_install(
 )
 }
 \arguments{
-\item{pipelines}{any of "birds", "bats", "images", "validation", "reports", or "all". Reports are
-always included; \code{cehbio_install("reports")} sets up reports only (a small install), e.g. to report
-on results someone else made}
+\item{pipelines}{any of "birds", "bats", "images", "validation", "reports", or "all".
+\code{cehbio_install("reports")} sets up reports only, with no Python at all: reports are made in R}
 
 \item{source}{where to install the toolkit's Python side from (default: the newest on GitHub)}
 
 \item{command}{also make the \code{cehbio} terminal command (default TRUE)}
 }
 \description{
-Everything is fetched for you: no Miniforge, conda or admin rights needed. The pipelines get their own
-Python 3.11 environment in \code{cehbio_home()} (via uv), shared with the \code{cehbio} terminal command.
-Reports also get Quarto and the R packages they use. Run it again with other pipelines to add them.
+Everything is fetched for you: no Miniforge, conda or admin rights needed. The pipelines (the models)
+get their own Python 3.11 environment in \code{cehbio_home()} (via uv), shared with the \code{cehbio} terminal
+command. Reports are made in R, and get Quarto and the R packages they use. Run it again with other pipelines to add them.
 }

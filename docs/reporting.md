@@ -1,6 +1,6 @@
 # Reporting
 
-Reports start from one set of tables, made from a project's results by `cehbio report-data`. Reports made in Python and reports made in R both read these tables, and the same words, so they say the same thing. Everything stays in your results folder.
+Reports start from one set of tables, made from a project's results by `cehbio report-data` (Python) or `cehbio_report_data()` (R, with no Python needed). Both make identical tables by the same rules, and the same words, so the reports say the same thing whichever you use. Everything stays in your results folder.
 
 ## Summary reports
 

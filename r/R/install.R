@@ -156,13 +156,12 @@ cehbio_quarto <- function(install = TRUE) {
 
 #' Install the toolkit, once
 #'
-#' Everything is fetched for you: no Miniforge, conda or admin rights needed. The pipelines get their own
-#' Python 3.11 environment in `cehbio_home()` (via uv), shared with the `cehbio` terminal command.
-#' Reports also get Quarto and the R packages they use. Run it again with other pipelines to add them.
+#' Everything is fetched for you: no Miniforge, conda or admin rights needed. The pipelines (the models)
+#' get their own Python 3.11 environment in `cehbio_home()` (via uv), shared with the `cehbio` terminal
+#' command. Reports are made in R, and get Quarto and the R packages they use. Run it again with other pipelines to add them.
 #'
-#' @param pipelines any of "birds", "bats", "images", "validation", "reports", or "all". Reports are
-#'   always included; `cehbio_install("reports")` sets up reports only (a small install), e.g. to report
-#'   on results someone else made
+#' @param pipelines any of "birds", "bats", "images", "validation", "reports", or "all".
+#'   `cehbio_install("reports")` sets up reports only, with no Python at all: reports are made in R
 #' @param source where to install the toolkit's Python side from (default: the newest on GitHub)
 #' @param command also make the `cehbio` terminal command (default TRUE)
 #' @export
@@ -172,8 +171,9 @@ cehbio_install <- function(pipelines = "reports",
   pipelines <- unique(pipelines)
   bad <- setdiff(pipelines, c("birds", "bats", "images", "validation", "reports", "all"))
   if (length(bad)) stop("Unknown: ", paste(bad, collapse = ", "), ". Choose from birds, bats, images, validation, reports, all.", call. = FALSE)
-  python <- union(pipelines, "reports")        # reports are always included: they're small
-  {                                            # the toolkit's own Python environment
+  python <- setdiff(pipelines, "reports")
+  if (length(python)) python <- union(python, "reports")    # the Python side's reports come too: they're small
+  if (length(python)) {                        # the toolkit's own Python environment (reports in R don't need it)
     uv <- cehbio_uv()
     env <- file.path(cehbio_home(), "env")
     py <- file.path(env, if (.win()) "Scripts/python.exe" else "bin/python")
@@ -191,13 +191,13 @@ cehbio_install <- function(pipelines = "reports",
     if (command) .shim(py)
   }
   {                                            # what reports from R need
-    need <- c("quarto", "knitr", "ggplot2")
+    need <- c("quarto", "knitr", "ggplot2", "yaml")
     need <- need[!vapply(need, requireNamespace, TRUE, quietly = TRUE)]
     if (length(need)) { message("Installing R packages: ", paste(need, collapse = ", ")); utils::install.packages(need) }
     q <- cehbio_quarto()
     message("Quarto: ", q)
   }
   message("Done.")
-  cehbio_check()
+  if (length(python)) cehbio_check()
   invisible(TRUE)
 }

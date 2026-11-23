@@ -113,17 +113,17 @@ def build(tables: dict, about: dict) -> dict:
                       if len(main) else "") + ".")
         if pipe == "images" and len(sp):
             moths = int(sp.loc[sp["kind"] == "moth", "individuals"].sum())
-            others = sp[sp["kind"] == "other insect"].sort_values("individuals", ascending=False)
+            others = sp[sp["kind"] == "other insect"].sort_values("individuals", ascending=False, kind="stable")
             if d.individuals:
                 lines.append(f"{round(100 * moths / d.individuals)}% of the insects were moths" +
                              (f"; the commonest other group was {others['taxon'].iloc[0]}" if len(others) else "") + ".")
         if len(n) and n["individuals"].max() > 0:
-            best = n.sort_values("individuals", ascending=False).iloc[0]
+            best = n.sort_values("individuals", ascending=False, kind="stable").iloc[0]
             lines.append(f"The busiest night was {_date(best['night'])}, with {_n(best['individuals'])} "
                          f"{g['unit']}" + (f" at {best['temperature_mean_c']:.0f} °C on average"
                                            if pd.notna(best.get("temperature_mean_c")) else "") + ".")
         if len(main):
-            top = main.sort_values("individuals", ascending=False).head(3)
+            top = main.sort_values("individuals", ascending=False, kind="stable").head(3)
             names = [f"{(r.common_name + ' (' + r.taxon + ')') if isinstance(getattr(r, 'common_name', None), str) else r.taxon}"
                      for r in top.itertuples()]
             lines.append("The most often recorded were " + ", ".join(names[:-1]) + (" and " if len(names) > 1 else "")

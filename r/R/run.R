@@ -117,15 +117,3 @@ cehbio_clock_check <- function(lat, lon, timezone = NULL, folder = NULL, results
   cehbio("clock-check", .opt("lat", lat), .opt("lon", lon), .opt("timezone", timezone), .opt("folder", folder),
          .opt("results", results), .opt("bucket", bucket), .opt("deployment", deployment), .opt("device", device))
 }
-
-#' Make the report tables for a project
-#'
-#' Writes deployments, nights (with weather and the moon), individuals and species tables to
-#' `<results>/<pipeline>/<project>/report/data/`. See `read_report_data()`.
-#' @inheritParams cehbio_run
-#' @param sites a CSV with deployment, latitude, longitude, timezone, clock, start, end
-#' @param weather "open-meteo" (non-commercial only), "era5-land" (commercial use allowed) or "none"
-#' @export
-cehbio_report_data <- function(pipeline, project, sites = NULL, weather = "open-meteo") {
-  cehbio("report-data", pipeline, .opt("project", project), .opt("sites", sites), .opt("weather", weather))
-}
