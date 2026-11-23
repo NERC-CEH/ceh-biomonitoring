@@ -74,7 +74,7 @@ def _params(pipeline, args, device: dict | None = None) -> dict:
 def cmd_pipelines(args):
     print(f"ceh-biomonitoring {__version__}\n")
     for name, title, extra, ok, msg in pipelines.available():
-        mark = "installed" if ok else f'not installed: pip install -e ".[{extra}]"'
+        mark = "installed" if ok else f'not installed: run the installer again with {extra}, or in R cehbio_install("{extra}")'
         print(f"  {name:10s} {title}\n  {'':10s} [{mark}]\n")
 
 
