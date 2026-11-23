@@ -101,11 +101,7 @@ cehbio_uv <- function() {
 #' @export
 cehbio_quarto <- function(install = TRUE) {
   own <- file.path(cehbio_home(), "quarto", "bin", if (.win()) "quarto.exe" else "quarto")
-  env <- file.path(cehbio_home(), "env")
-  in_env <- c(file.path(env, if (.win()) "Scripts/quarto.exe" else "bin/quarto"),        # from the reports install
-              Sys.glob(file.path(env, if (.win()) "Lib/site-packages/quarto_cli/bin/quarto.exe"
-                                      else "lib/python3*/site-packages/quarto_cli/bin/quarto")))
-  cand <- c(Sys.getenv("QUARTO_PATH"), own, in_env, unname(Sys.which("quarto")),
+  cand <- c(Sys.getenv("QUARTO_PATH"), own, unname(Sys.which("quarto")),
             if (.win()) file.path(Sys.getenv("LOCALAPPDATA"), "Programs/Quarto/bin/quarto.exe"),
             if (.win()) "C:/Program Files/Quarto/bin/quarto.exe")
   cand <- cand[nzchar(cand) & file.exists(cand)]

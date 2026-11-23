@@ -105,6 +105,8 @@ class Settings:
         path = settings_file or USER_SETTINGS
         if path and Path(path).exists():
             merged = _deep_merge(merged, yaml.safe_load(Path(path).read_text()) or {})
+        if os.environ.get("CEHBIO_RESULTS"):           # e.g. from R's options(cehbio.results = ...)
+            merged["outputs_root"] = os.environ["CEHBIO_RESULTS"]
         merged = _deep_merge(merged, overrides or {})
         values = _expand(merged)
         new, old = (Path(x).expanduser() for x in (NEW_DEFAULT_OUTPUTS, OLD_DEFAULT_OUTPUTS))

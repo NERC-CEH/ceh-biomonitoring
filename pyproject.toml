@@ -54,7 +54,6 @@ validation = [                    # cehbio validate prepare: Mothbot packages, a
 ]
 reports = [                       # cehbio report: charts, and Word and PDF versions
     "matplotlib>=3.8",
-    "quarto-cli>=1.6",            # Quarto, for Word and PDF (HTML doesn't need it)
 ]
 dev = [
     "pytest>=8",

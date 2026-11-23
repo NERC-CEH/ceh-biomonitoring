@@ -46,6 +46,12 @@ cehbio <- function(..., echo = TRUE) {
   if (is.null(py)) stop("The toolkit isn't installed yet. Run cehbio_install() first, e.g. cehbio_install(\"bats\").", call. = FALSE)
   args <- c("-m", "ceh_biomonitoring", unlist(list(...)))
   args <- vapply(args, shQuote, "", type = if (.Platform$OS.type == "windows") "cmd" else "sh")
+  res <- getOption("cehbio.results", "")
+  if (nzchar(res)) {                                   # the same results folder for the Python side
+    old <- Sys.getenv("CEHBIO_RESULTS", NA)
+    Sys.setenv(CEHBIO_RESULTS = normalizePath(res, winslash = "/", mustWork = FALSE))
+    on.exit(if (is.na(old)) Sys.unsetenv("CEHBIO_RESULTS") else Sys.setenv(CEHBIO_RESULTS = old), add = TRUE)
+  }
   if (!echo) return(invisible(suppressWarnings(system2(py, args, stdout = TRUE, stderr = TRUE))))
   code <- system2(py, args)
   if (!identical(as.integer(code), 0L)) warning("cehbio stopped with an error (see above).", call. = FALSE)

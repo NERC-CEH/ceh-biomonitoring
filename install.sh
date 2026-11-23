@@ -73,6 +73,7 @@ if [[ ! -x "$PY" ]]; then
 fi
 echo "Installing: $EXTRAS (the first time takes a while: the models' packages are large)"
 "$UV" pip install --python "$PY" --upgrade -e "$HERE[$EXTRAS]"
+"$PY" -m ceh_biomonitoring.reporting.getquarto >/dev/null || echo "(Quarto, for Word and PDF reports, will be fetched when first needed)"
 
 # the `cehbio` command, for every new terminal
 BIN="$HOME/.local/bin"

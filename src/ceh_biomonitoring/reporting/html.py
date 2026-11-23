@@ -303,7 +303,7 @@ def add_command(sub, common) -> None:
     p.add_argument("--weather", default="open-meteo", choices=["open-meteo", "era5-land", "none"])
     p.add_argument("--refresh", action="store_true", help="remake the report data first (after new results)")
     p.add_argument("--format", nargs="+", default=["html"], choices=["html", "docx", "pdf"],
-                   help="html (default), docx (Word) and/or pdf; Word and PDF need Quarto (pip install quarto-cli)")
+                   help="html (default), docx (Word) and/or pdf; Word and PDF need Quarto (fetched the first time if you have none)")
     p.add_argument("--reference-doc", help="a Word file whose styles the Word report uses")
 
     def go(a):

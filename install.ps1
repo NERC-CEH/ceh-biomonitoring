@@ -56,15 +56,19 @@ if ($Here -and (Test-Path (Join-Path $Here "pyproject.toml"))) { $Source = @("$H
 Write-Host "Installing: $Extras (the first time takes a while: the models' packages are large)"
 & $Uv pip install --python $Py --upgrade @Source
 if ($LASTEXITCODE -ne 0) { throw "The install didn't finish: see the messages above, then run it again." }
+& $Py -m ceh_biomonitoring.reporting.getquarto | Out-Null
+if ($LASTEXITCODE -ne 0) { Write-Host "(Quarto, for Word and PDF reports, will be fetched when first needed)" }
 
 # the `cehbio` command, in your own PATH (no admin rights needed)
-$Bin = Join-Path $env:USERPROFILE ".local\bin"
-New-Item -ItemType Directory -Force $Bin | Out-Null
-Set-Content -Path (Join-Path $Bin "cehbio.cmd") -Encoding ascii -Value "@echo off`r`n`"$Py`" -m ceh_biomonitoring %*"
-$UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
-if (-not $UserPath) { $UserPath = "" }
-if (($UserPath -split ";") -notcontains $Bin) {
-    [Environment]::SetEnvironmentVariable("Path", ($UserPath.TrimEnd(";") + ";" + $Bin).TrimStart(";"), "User")
+if (-not $env:CEHBIO_NO_COMMAND) {
+    $Bin = Join-Path $env:USERPROFILE ".local\bin"
+    New-Item -ItemType Directory -Force $Bin | Out-Null
+    Set-Content -Path (Join-Path $Bin "cehbio.cmd") -Encoding ascii -Value "@echo off`r`n`"$Py`" -m ceh_biomonitoring %*"
+    $UserPath = [Environment]::GetEnvironmentVariable("Path", "User")
+    if (-not $UserPath) { $UserPath = "" }
+    if (($UserPath -split ";") -notcontains $Bin) {
+        [Environment]::SetEnvironmentVariable("Path", ($UserPath.TrimEnd(";") + ";" + $Bin).TrimStart(";"), "User")
+    }
 }
 
 Write-Host ""

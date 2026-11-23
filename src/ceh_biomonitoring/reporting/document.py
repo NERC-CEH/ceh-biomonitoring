@@ -2,8 +2,8 @@
 
 The same sections, words and charts as the HTML report (html.py), written as Markdown with the charts as
 image files, then turned into Word (.docx) or PDF by Quarto. PDF uses Quarto's own engine (Typst), so
-LaTeX isn't needed. Quarto comes with the toolkit's reports extra (pip install quarto-cli), or use one you
-have installed.
+LaTeX isn't needed. Quarto is one you have installed, or the toolkit downloads its own copy the first
+time (getquarto.py).
 
 A Word template can be given (--reference-doc): its styles (fonts, headings, colours) are used. The
 in-house plug-in uses this for the UKCEH report template.
@@ -24,18 +24,9 @@ FORMATS = {"html": None, "docx": "docx", "pdf": "typst"}
 
 
 def quarto() -> str:
-    q = shutil.which("quarto")
-    if q:
-        return q
-    try:                                    # the quarto-cli package's own copy
-        import quarto_cli  # noqa: F401
-        for cand in (Path(quarto_cli.__file__).parent / "bin" / n for n in ("quarto", "quarto.exe", "quarto.cmd")):
-            if cand.exists():
-                return str(cand)
-    except ImportError:
-        pass
-    raise SystemExit("Word and PDF reports need Quarto: pip install quarto-cli (or ./install.sh reports), "
-                     "or install it from https://quarto.org. HTML reports don't need it.")
+    """Quarto: one you have, or the toolkit's own copy (downloaded once, the first time it's needed)."""
+    from .getquarto import quarto as get
+    return get()
 
 
 def _png(uri: str, path: Path) -> str:
