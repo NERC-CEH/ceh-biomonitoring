@@ -37,7 +37,7 @@ jobs:
         run: cat cehbio.Rcheck/00check.log || true
 
   r-matches-python:
-    # R makes the report tables on its own: they must be the same as Python's (tests/test_r_matches_python.py)
+    # R works on its own: report tables the same as Python's, and uploads to a stand-in upload service
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -50,4 +50,4 @@ jobs:
       - run: Rscript -e 'install.packages(c("jsonlite", "nanoparquet", "digest", "curl", "yaml"))'
       - run: R CMD INSTALL r
       - run: pip install -e ".[dev]"
-      - run: pytest -q tests/test_r_matches_python.py
+      - run: pytest -q tests/test_r_matches_python.py tests/test_r_upload.py

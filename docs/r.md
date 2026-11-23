@@ -23,6 +23,18 @@ It all goes in one folder, `cehbio_home()` (`%LOCALAPPDATA%/ceh-biomonitoring` o
 
 > If your organisation blocks programs in your user folder, `cehbio_install()` says so; ask IT to allow `uv.exe` and Python in that folder.
 
+## Upload data to UKCEH
+
+Uploading needs only the R package: no Python and no `cehbio_install()`.
+
+```r
+cehbio_deployments()                    # your deployments, and whether each is active
+cehbio_request_deployment()             # ask for a new one: it asks step by step
+cehbio_upload()                         # upload: it asks step by step (sign in, deployment, data type, folder)
+```
+
+The questions, the checks and the upload log are the same as the [Upload guide](upload-guide.md)'s, so an upload started in R can be finished with the `cehbio upload` command, and the other way round: files already sent are skipped. Give the answers as arguments to skip the questions, e.g. `cehbio_upload(folder = "E:/", country = "United Kingdom", deployment = "Wytham Woods 1", data_type = "snapshot_images", name = "Your Name")`. Your password is asked for and stays hidden (or set the `CEHBIO_UPLOAD_USER` and `CEHBIO_UPLOAD_PASSWORD` environment variables).
+
 ## Run, follow, read
 
 ```r

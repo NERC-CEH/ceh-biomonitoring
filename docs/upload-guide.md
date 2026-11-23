@@ -4,6 +4,8 @@ This guide is for partners who collect data with UKCEH's automated monitoring sy
 
 If anything goes wrong or you have a question, email **Alyssa Duffy** at [alyduf@ceh.ac.uk](mailto:alyduf@ceh.ac.uk).
 
+**Use R?** You can do all of this from R instead, with nothing else to install: `cehbio_upload()`, `cehbio_deployments()` and `cehbio_request_deployment()` ask the same questions. See [Using the toolkit from R](r.md#upload-data-to-ukceh).
+
 ## What you need
 
 - **An upload username and password.** UKCEH gives these to partners when it has been agreed that UKCEH will process their data. If you don't have them, email Alyssa Duffy at [alyduf@ceh.ac.uk](mailto:alyduf@ceh.ac.uk).

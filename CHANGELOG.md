@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+**Uploading from R**
+- `cehbio_upload()`, `cehbio_deployments()` and `cehbio_request_deployment()` in the R package, with no Python: the same questions and the same upload log as `cehbio upload`, so an upload can be started in one and finished in the other. Tested against a stand-in upload service on every push.
+
 **Commercial or not**
 - Reports and report tables need to know whether the project is commercial (`--use`, R: `use =`): asked if not given, then remembered. Commercial projects get ERA5-Land weather (with the set-up offered if there's no key) and a warning for each model licensed for non-commercial use only.
 

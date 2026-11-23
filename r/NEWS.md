@@ -1,5 +1,6 @@
 # cehbio 0.3.0
 
+- Upload to UKCEH from R with no Python: `cehbio_upload()`, `cehbio_deployments()`, `cehbio_request_deployment()`.
 - `use = "commercial"` or `"noncommercial"` in `cehbio_report_data()` and `cehbio_report()`: asked if not
   given, then remembered for the project. Decides the weather and licence warnings.
 - `cehbio_weather_setup()`: walks you through setting up ERA5-Land weather for commercial reports (a free

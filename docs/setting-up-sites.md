@@ -4,6 +4,8 @@ Before you can [upload data to UKCEH](upload-guide.md), each device you've put o
 
 For help setting up the hardware itself (AMI traps, LepiSense), see the [AMI system deployment guide](https://github.com/AMI-system/ami-system-deployment-guide).
 
+**Use R?** `cehbio::cehbio_request_deployment()` and `cehbio::cehbio_deployments()` do the same as the commands below ([from R](r.md#upload-data-to-ukceh)).
+
 ## What is a deployment?
 
 A deployment is **one device, at one site, for one survey period**. For example, "AudioMoth 24F3191 at Wytham Woods 1, May to September 2027".
