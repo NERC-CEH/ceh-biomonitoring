@@ -8,7 +8,7 @@ Reports start from one set of tables, made from a project's results by `cehbio r
 |---|---|
 | `cehbio report images --project farm1 --sites sites.csv` | `cehbio_report("images", "farm1", sites = "sites.csv")` |
 
-Add `--format html docx pdf` (Python) or `formats = c("html", "docx", "pdf")` (R) for Word and PDF as well. Word and PDF need [Quarto](https://quarto.org), which `./install.sh reports` installs for you (it comes with R's quarto package too). PDF uses Quarto's own engine; where a managed laptop blocks that, the Word version is turned into a PDF by Microsoft Word, or by LibreOffice. `--reference-doc` / `reference_doc =` gives a Word file whose styles to use.
+Add `--format html docx pdf` (Python) or `formats = c("html", "docx", "pdf")` (R) for Word and PDF as well. Word and PDF need [Quarto](https://quarto.org), which the installer gets for you (`./install.sh`, `install-windows.bat` or `cehbio_install()` in R). PDF uses Quarto's own engine; where a managed laptop blocks that, the Word version is turned into a PDF by Microsoft Word, or by LibreOffice. `--reference-doc` / `reference_doc =` gives a Word file whose styles to use.
 
 Both write one self-contained HTML page per deployment, and one for the project, to `ceh-biomonitoring-results/images/farm1/report/`. They describe what was recorded; they don't interpret it or compare it with other places. Each covers:
 

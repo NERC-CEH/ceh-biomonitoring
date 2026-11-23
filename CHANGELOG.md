@@ -1,5 +1,10 @@
 # Changes
 
+## Unreleased
+
+**Installing**
+- Nothing to install first: `install.sh` (Mac, Linux, JASMIN), `install-windows.bat` (double-click) and `cehbio_install()` in R get uv, which gets Python 3.11, and put everything in one folder (`CEHBIO_HOME`). The `cehbio` command works in any new terminal, with no `conda activate`. Reports are always included. `./install.sh --conda` keeps the old way.
+
 ## 0.3.0 (19 November 2026)
 
 **Folders and progress**

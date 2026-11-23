@@ -4,16 +4,25 @@ Everything can be done from R: installing, running the pipelines, following them
 
 ## Install (once)
 
-You need [Miniforge](https://conda-forge.org/download/) (conda) and R 4.1 or newer. For reports you also need [Quarto](https://quarto.org).
+You need R 4.1 or newer, and nothing else: no Miniforge, conda, Quarto or admin rights. `cehbio_install()` fetches them for you.
 
 ```r
 install.packages("remotes")
 remotes::install_github("NERC-CEH/ceh-biomonitoring", subdir = "r")
 library(cehbio)
-cehbio_install(c("bats", "reports"))     # the pipelines you want: birds, bats, images, validation, reports, or "all"
+cehbio_install("bats")      # the pipelines you want: "birds", "bats", "images", "validation", or "all"
 ```
 
-`cehbio_install()` makes a conda environment called `ceh-biomonitoring` and installs the toolkit into it. Run it again with other pipelines to add them.
+What it does, once:
+
+- gets [uv](https://docs.astral.sh/uv), a small program that fetches Python 3.11 and installs packages;
+- makes the toolkit's own Python environment and installs the pipelines you chose, with reports;
+- gets the R packages reports use (quarto, knitr, ggplot2) and Quarto itself, for Word and PDF;
+- makes the `cehbio` command, so the same install works from a terminal too.
+
+It all goes in one folder, `cehbio_home()` (`%LOCALAPPDATA%/ceh-biomonitoring` on Windows, `~/.local/share/ceh-biomonitoring` elsewhere), never in your results. Run `cehbio_install()` again with other pipelines to add them. `cehbio_install("reports")` alone is a small install, e.g. for making reports on results someone else ran.
+
+> If your organisation blocks programs in your user folder, `cehbio_install()` says so; ask IT to allow `uv.exe` and Python in that folder.
 
 ## Run, follow, read
 
@@ -52,4 +61,4 @@ w <- EntoInsights::wrangle_results(file.path(d$folder, "entoinsights", "dep00012
 
 ## Which Python is used
 
-`cehbio_python()` shows it. It's the `ceh-biomonitoring` conda environment unless you choose another with `options(cehbio.python = "path/to/python")` or the `CEHBIO_PYTHON` environment variable. `options(cehbio.results = "...")` points R at a different results folder.
+`cehbio_python()` shows it. It's the environment `cehbio_install()` made (or, if you installed the old way, the `ceh-biomonitoring` conda environment) unless you choose another with `options(cehbio.python = "path/to/python")` or the `CEHBIO_PYTHON` environment variable. `options(cehbio.results = "...")` points R at a different results folder.

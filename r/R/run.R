@@ -3,14 +3,16 @@
 
 #' The Python that runs the toolkit
 #'
-#' Looks, in order, at `options(cehbio.python = ...)`, the `CEHBIO_PYTHON` environment variable, and the
-#' `ceh-biomonitoring` conda environment in the usual Miniforge / Miniconda places.
+#' Looks, in order, at `options(cehbio.python = ...)`, the `CEHBIO_PYTHON` environment variable, the
+#' toolkit's own environment (made by `cehbio_install()`), and a `ceh-biomonitoring` conda environment.
 #' @return the path to python, or NULL if the toolkit isn't installed yet
 #' @export
 cehbio_python <- function() {
   given <- c(getOption("cehbio.python", ""), Sys.getenv("CEHBIO_PYTHON"))
   given <- given[nzchar(given)]
   if (length(given) && file.exists(given[1])) return(normalizePath(given[1], winslash = "/"))
+  own <- file.path(cehbio_home(), "env", if (.Platform$OS.type == "windows") "Scripts/python.exe" else "bin/python")
+  if (file.exists(own)) return(normalizePath(own, winslash = "/"))
   home <- path.expand("~")
   if (.Platform$OS.type == "windows") home <- Sys.getenv("USERPROFILE", home)
   bases <- c(file.path(home, c("miniforge3", "miniconda3", "anaconda3", "mambaforge")),
@@ -41,7 +43,7 @@ cehbio_python <- function() {
 #' @export
 cehbio <- function(..., echo = TRUE) {
   py <- cehbio_python()
-  if (is.null(py)) stop("The toolkit isn't installed yet. Run cehbio_install() first.", call. = FALSE)
+  if (is.null(py)) stop("The toolkit isn't installed yet. Run cehbio_install() first, e.g. cehbio_install(\"bats\").", call. = FALSE)
   args <- c("-m", "ceh_biomonitoring", unlist(list(...)))
   args <- vapply(args, shQuote, "", type = if (.Platform$OS.type == "windows") "cmd" else "sh")
   if (!echo) return(invisible(suppressWarnings(system2(py, args, stdout = TRUE, stderr = TRUE))))
@@ -56,37 +58,6 @@ cehbio <- function(..., echo = TRUE) {
   if (is.null(value) || identical(value, FALSE)) return(character())
   if (isTRUE(value)) return(paste0("--", name))
   c(paste0("--", name), as.character(value))
-}
-
-#' Install the toolkit's Python side, once
-#'
-#' Makes a conda environment called `ceh-biomonitoring` and installs the toolkit and the pipelines you
-#' choose into it. Needs Miniforge (https://conda-forge.org/download/) or another conda.
-#' @param pipelines any of "birds", "bats", "images", "validation", "reports", or "all"
-#' @param source where to install from (default: the newest version on GitHub)
-#' @export
-cehbio_install <- function(pipelines = "reports",
-                           source = "https://github.com/NERC-CEH/ceh-biomonitoring/archive/refs/heads/main.zip") {
-  conda <- .conda()
-  if (is.null(conda)) {
-    stop("No conda found. Install Miniforge from https://conda-forge.org/download/ (or run ",
-         "reticulate::install_miniconda()), then run cehbio_install() again.", call. = FALSE)
-  }
-  if (is.null(cehbio_python())) {
-    message("Making the ceh-biomonitoring environment (a few minutes, once) ...")
-    system2(conda, c("create", "-n", "ceh-biomonitoring", "python=3.11", "-y"))
-  }
-  py <- cehbio_python()
-  if (is.null(py)) stop("The environment wasn't made: see the messages above.", call. = FALSE)
-  extras <- paste(pipelines, collapse = ",")
-  message("Installing the toolkit with: ", extras)
-  if (.Platform$OS.type != "windows" && dir.exists("/gws")) {        # JASMIN's /tmp is too small for torch
-    tmp <- file.path("/var/tmp", Sys.getenv("USER"))
-    dir.create(tmp, showWarnings = FALSE)
-    Sys.setenv(TMPDIR = tmp)
-  }
-  system2(py, c("-m", "pip", "install", "--upgrade", shQuote(sprintf("ceh-biomonitoring[%s] @ %s", extras, source))))
-  cehbio_check()
 }
 
 #' Check settings, results folder and what's installed

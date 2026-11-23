@@ -37,6 +37,6 @@ the report files, invisibly
 \description{
 One report per deployment (and one for the project), in \verb{<results>/<pipeline>/<project>/report/}, the
 same place and the same content as the Python report (\verb{cehbio report}), from the same tables. Makes the
-tables first if they aren't there (or \code{refresh = TRUE}). Needs Quarto (https://quarto.org) and the
-quarto, knitr and ggplot2 R packages.
+tables first if they aren't there (or \code{refresh = TRUE}). Needs Quarto and a few R packages:
+\code{cehbio_install("reports")} gets them, once.
 }

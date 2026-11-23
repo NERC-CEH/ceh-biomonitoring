@@ -2,8 +2,8 @@
 #'
 #' One report per deployment (and one for the project), in `<results>/<pipeline>/<project>/report/`, the
 #' same place and the same content as the Python report (`cehbio report`), from the same tables. Makes the
-#' tables first if they aren't there (or `refresh = TRUE`). Needs Quarto (https://quarto.org) and the
-#' quarto, knitr and ggplot2 R packages.
+#' tables first if they aren't there (or `refresh = TRUE`). Needs Quarto and a few R packages:
+#' `cehbio_install("reports")` gets them, once.
 #'
 #' @param pipeline "birds", "bats" or "images"
 #' @param project the project folder
@@ -17,11 +17,15 @@
 #' @export
 cehbio_report <- function(pipeline, project, deployments = NULL, sites = NULL, weather = "open-meteo",
                           refresh = FALSE, formats = "html", reference_doc = NULL) {
-  for (p in c("quarto", "knitr", "ggplot2")) {
-    if (!requireNamespace(p, quietly = TRUE)) {
-      stop("Reports need the ", p, " package: install.packages(\"", p, "\")", call. = FALSE)
-    }
+  need <- c("quarto", "knitr", "ggplot2")
+  if (!all(vapply(need, requireNamespace, TRUE, quietly = TRUE))) {
+    stop("Reports need a few things set up first. Run cehbio_install(\"reports\") once.", call. = FALSE)
   }
+  q <- cehbio_quarto(install = FALSE)
+  if (is.null(q)) stop("Reports need Quarto. Run cehbio_install(\"reports\") once to get it.", call. = FALSE)
+  old_q <- Sys.getenv("QUARTO_PATH", NA)
+  Sys.setenv(QUARTO_PATH = q)
+  on.exit(if (is.na(old_q)) Sys.unsetenv("QUARTO_PATH") else Sys.setenv(QUARTO_PATH = old_q), add = TRUE)
   bad <- setdiff(formats, c("html", "docx", "pdf"))
   if (length(bad)) stop("Unknown format(s): ", paste(bad, collapse = ", "), ". Use html, docx, pdf.", call. = FALSE)
   folder <- file.path(results_folder(), pipeline, project, "report", "data")

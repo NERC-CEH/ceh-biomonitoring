@@ -10,6 +10,6 @@ cehbio_python()
 the path to python, or NULL if the toolkit isn't installed yet
 }
 \description{
-Looks, in order, at \code{options(cehbio.python = ...)}, the \code{CEHBIO_PYTHON} environment variable, and the
-\code{ceh-biomonitoring} conda environment in the usual Miniforge / Miniconda places.
+Looks, in order, at \code{options(cehbio.python = ...)}, the \code{CEHBIO_PYTHON} environment variable, the
+toolkit's own environment (made by \code{cehbio_install()}), and a \code{ceh-biomonitoring} conda environment.
 }

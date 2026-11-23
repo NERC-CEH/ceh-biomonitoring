@@ -25,30 +25,26 @@ UKCEH also offers further analysis as a service, e.g. regional species lists, no
 
 ## Install
 
-You need [Miniforge](https://conda-forge.org/download/) (conda) once. Then, on Mac, Linux or JASMIN:
+Nothing to install first: no Miniforge, conda or admin rights. The installer fetches everything itself (Python 3.11 and the packages, through a small program called [uv](https://docs.astral.sh/uv)) and keeps it in one folder of its own.
+
+**On Windows:** download this repository (green **Code** button, then **Download ZIP**), unzip it, and double-click **`install-windows.bat`**. Type the pipelines you want (e.g. `bats`, or `birds bats`, or `all`) and press Enter.
+
+**On Mac, Linux or JASMIN:**
 
 ```bash
 git clone https://github.com/NERC-CEH/ceh-biomonitoring.git
 cd ceh-biomonitoring
-./install.sh                 # just uploading
+./install.sh                 # just uploading and reports
 ./install.sh bats            # + bats       (or: birds, images, birds bats, or: all)
-conda activate ceh-biomonitoring
-cehbio pipelines             # what is installed
 ```
 
-To add another pipeline later, run `./install.sh <name>` again.
+**From R:** `cehbio::cehbio_install("bats")` does the same: see [Using the toolkit from R](docs/r.md).
+
+Then open a **new** terminal (on Windows, **Windows PowerShell** from the Start menu) and type `cehbio pipelines` to see what's installed. To add another pipeline later, run the installer again with its name.
+
+> Everything goes in `%LOCALAPPDATA%\ceh-biomonitoring` (Windows) or `~/.local/share/ceh-biomonitoring` (Mac, Linux), or the folder in the `CEHBIO_HOME` environment variable. Your results go somewhere else (see below). Prefer conda? `./install.sh --conda bats` makes a conda environment called `ceh-biomonitoring`, as before.
 
 **Always on the newest models:** run `cehbio update` now and then. It gets the newest code, model lists, packages and models for every pipeline you have installed (BirdNET, Perch, BatDetect2 and the image models). `cehbio versions` shows what you're using, and every result records the exact versions that made it.
-
-**On Windows**, in the **Miniforge Prompt**:
-
-```
-conda create -n ceh-biomonitoring python=3.11 -y
-conda activate ceh-biomonitoring
-pip install "ceh-biomonitoring[bats] @ https://github.com/NERC-CEH/ceh-biomonitoring/archive/refs/heads/main.zip"
-```
-
-Put the pipelines you want in the brackets, e.g. `[birds]`, `[images]`, `[birds,bats]` or `[all]`. Leave out the brackets for uploading only.
 
 > **On JASMIN:** install on a sci server (e.g. `ssh sci-vm-04`), not a login node. The installer works around JASMIN's small `/tmp` limit for you.
 
@@ -57,7 +53,7 @@ Put the pipelines you want in the brackets, e.g. `[birds]`, `[images]`, `[birds,
 **Prefer R?** Everything below can be done from R instead: see [Using the toolkit from R](docs/r.md).
 
 
-You type each command into a terminal (on Windows, the **Miniforge Prompt**) after `conda activate ceh-biomonitoring`. No coding is needed.
+You type each command into a terminal (on Windows, **Windows PowerShell**). No coding is needed.
 
 **1. Check everything is set up.**
 
