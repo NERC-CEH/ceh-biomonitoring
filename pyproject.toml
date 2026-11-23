@@ -55,12 +55,21 @@ validation = [                    # cehbio validate prepare: Mothbot packages, a
 reports = [                       # cehbio report: charts, and Word and PDF versions
     "matplotlib>=3.8",
 ]
+videos = [                        # cehbio video, cehbio soundscape: .mp4 with sound
+    "av>=12",                     # PyAV: ffmpeg's libraries inside Python (managed laptops block ffmpeg.exe)
+    "pillow>=10",
+    "matplotlib>=3.8",
+    "soundfile>=0.13",
+]
 dev = [
     "pytest>=8",
+    "av>=12",                     # video tests
+    "soundfile>=0.13",
+    "matplotlib>=3.8",
     "pillow>=10",                 # mask tests
 ]
 all = [
-    "ceh-biomonitoring[birds,bats,images,validation,reports]",
+    "ceh-biomonitoring[birds,bats,images,validation,reports,videos]",
 ]
 
 [project.scripts]

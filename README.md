@@ -15,6 +15,7 @@ Tools from the UK Centre for Ecology & Hydrology (UKCEH) for biodiversity monito
 | Expert checks of the results (birds, bats, images) | fair samples for experts, packaged as audio clips or for the [Mothbot](https://mothbot-classify.vercel.app) labelling site, and their answers read back | `cehbio validate` | [Manual validation](docs/validation.md), [Sampling methods](docs/sampling-methods.md) |
 | Analysis-ready tables: nights with weather and the moon, individuals, species | weather from Open-Meteo or ERA5-Land; works with EntoInsights | `cehbio report-data` | [Reporting](docs/reporting.md#the-tables) |
 | Summary reports per deployment and project, in HTML, Word and PDF | | `cehbio report` | [Reporting](docs/reporting.md) |
+| Videos of a night's photos (boxes, names, tracks) and soundscapes of recordings (spectrogram, sound, detections) | | `cehbio video`, `cehbio soundscape` | [Videos and soundscapes](docs/videos.md) |
 | Everything from R | the `cehbio` R package: uploading and reports with no Python at all | `cehbio_upload()`, `cehbio_run()`, `cehbio_report()` ... | [From R](docs/r.md) |
 
 You only install what you need. Everything shares one environment, called `ceh-biomonitoring`.
@@ -101,6 +102,7 @@ ceh-biomonitoring-results/          in your user folder (cehbio check shows wher
     birds/  bats/  images/          one folder per pipeline
         my-woods/                   one folder per project
             wood-1/                 one folder per deployment: results, READ ME.txt, PROGRESS.txt
+                videos/             cehbio video and cehbio soundscape put their videos here
                 working/            the pipeline's own files: you don't need to open these
     labelling/                      expert checks, in steps: 1_sample, 2_for_experts, 3_answers
     examples/   upload_logs/
@@ -117,8 +119,9 @@ Read them in this order:
 3. [Running and results](docs/running.md): big jobs, computing clusters, following a run, where everything goes
 4. [Manual validation](docs/validation.md) and [Sampling methods](docs/sampling-methods.md): expert checks
 5. [Reporting](docs/reporting.md): summary reports and report-ready tables, with weather and the moon
-6. [Using the toolkit from R](docs/r.md): everything from R, from installing to reports
-7. For sending data to UKCEH: [Setting up your sites](docs/setting-up-sites.md) and the [Upload guide](docs/upload-guide.md)
+6. [Videos and soundscapes](docs/videos.md): to share what was found
+7. [Using the toolkit from R](docs/r.md): everything from R, from installing to reports
+8. For sending data to UKCEH: [Setting up your sites](docs/setting-up-sites.md) and the [Upload guide](docs/upload-guide.md)
 
 **Words used in the guides:**
 

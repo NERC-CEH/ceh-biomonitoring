@@ -126,6 +126,9 @@
   u$score <- tapply(d[[score]], d$unit, function(v) if (all(is.na(v))) NA_real_ else max(v, na.rm = TRUE))
   u$unlikely <- if ("unlikely_this_month" %in% names(d))
     as.logical(tapply(tolower(as.character(d$unlikely_this_month)) %in% c("true", "1"), d$unit, any)) else FALSE
+  pk <- vapply(split(seq_len(nrow(d)), d$unit), function(i) i[which.max(replace(d[[score]][i], is.na(d[[score]][i]), -Inf))], 0L)
+  u$peak_s <- d$start_time[pk]                 # the loudest-scoring moment of each event (as Python's peak_s)
+  u$window_s <- d$end_time[pk] - d$start_time[pk]
   names(u)[names(u) == "species_name"] <- "species"
   u$score_type <- score
   u$noise_class <- NA_character_

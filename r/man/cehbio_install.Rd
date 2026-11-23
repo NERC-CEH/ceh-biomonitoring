@@ -11,7 +11,8 @@ cehbio_install(
 )
 }
 \arguments{
-\item{pipelines}{any of "birds", "bats", "images", "validation", "reports", or "all".
+\item{pipelines}{any of "birds", "bats", "images", "validation", "reports", "videos", or "all".
+"videos" (\code{cehbio_video()}, \code{cehbio_soundscape()}) needs no Python either.
 \code{cehbio_install("reports")} sets up reports only, with no Python at all: reports are made in R}
 
 \item{source}{where to install the toolkit's Python side from (default: the newest on GitHub)}

@@ -13,7 +13,7 @@ param([Parameter(ValueFromRemainingArguments = $true)] [string[]] $Pipelines)
 $ErrorActionPreference = "Stop"
 $ProgressPreference = "SilentlyContinue"
 
-$Known = "birds", "bats", "images", "validation", "reports", "all"
+$Known = "birds", "bats", "images", "validation", "reports", "videos", "all"
 $Pipelines = @($Pipelines | ForEach-Object { $_ -split "[ ,]+" } | Where-Object { $_ })
 foreach ($p in $Pipelines) { if ($Known -notcontains $p) { throw "Unknown pipeline '$p'. Choose from: $($Known -join ', ')" } }
 $Extras = (@("reports") + $Pipelines | Select-Object -Unique) -join ","

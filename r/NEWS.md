@@ -1,5 +1,7 @@
 # cehbio 0.3.0
 
+- `cehbio_video()` and `cehbio_soundscape()`: the night's photos as a video (boxes, names, tracks), and soundscapes
+  of recordings (sound, moving spectrogram, detections; bats slowed ten times), with no Python.
 - Upload to UKCEH from R with no Python: `cehbio_upload()`, `cehbio_deployments()`, `cehbio_request_deployment()`.
 - `use = "commercial"` or `"noncommercial"` in `cehbio_report_data()` and `cehbio_report()`: asked if not
   given, then remembered for the project. Decides the weather and licence warnings.

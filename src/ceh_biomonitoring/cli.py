@@ -471,6 +471,10 @@ def build_parser() -> argparse.ArgumentParser:
     _add_report_data(sub, common)
     from .reporting.copernicus import add_command as _add_weather_setup
     _add_weather_setup(sub, common)
+    from .videos.night import add_command as _add_video
+    _add_video(sub, common)
+    from .videos.soundscape import add_command as _add_soundscape
+    _add_soundscape(sub, common)
     from .reporting.html import add_command as _add_report
     _add_report(sub, common)
     sub.add_parser("combine", parents=[common, dep], help="merge chunk outputs + QA").set_defaults(func=cmd_combine)

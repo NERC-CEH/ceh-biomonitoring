@@ -8,6 +8,7 @@
                 READ ME.txt           what each file is
                 PROGRESS.txt          how far the run has got (updated as it goes)
                 <deployment>_detections.parquet, .csv, _files.csv, _qa.json     the results
+                videos/               cehbio video and cehbio soundscape
                 working/              the pipeline's own files: nobody needs to open these
                     file_lists/       which files are in which chunk (+ manifest.json)
                     chunks/           each chunk's results, before they are joined

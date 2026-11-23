@@ -6,6 +6,7 @@
 #
 #   ./install.sh bats             just the bat pipeline
 #   ./install.sh birds bats       birds + bats
+#   ./install.sh videos           videos of nights and soundscapes (add to any of the above)
 #   ./install.sh all              everything
 #   ./install.sh                  just the core and reports (add pipelines later the same way)
 #   ./install.sh --conda bats     the old way, into a conda environment called ceh-biomonitoring

@@ -70,6 +70,18 @@ With [EntoInsights](https://github.com/AMI-system/EntoInsights):
 w <- EntoInsights::wrangle_results(file.path(d$folder, "entoinsights", "dep000123_combined_results.csv"), taxa = "moth")
 ```
 
+## Videos and soundscapes
+
+Made in R, with no Python (`cehbio_install("videos")` once, for the magick and av packages):
+
+```r
+cehbio_video("farm1", "trap-1", individuals = 5)          # the busiest night, and 5 insects close up
+cehbio_soundscape("birds", "my-woods", "wood-1")          # each species' best moment, with sound
+cehbio_soundscape("bats", "my-woods", "wood-1", day = "2026-05-11")
+```
+
+The same videos as `cehbio video` and `cehbio soundscape`: see [Videos and soundscapes](videos.md). If the photos or recordings aren't where the pipeline read them, give `source_root = "E:/copies"`. (Fetching them from the object store needs the Python toolkit.)
+
 ## Which Python is used
 
 `cehbio_python()` shows it. It's the environment `cehbio_install()` made (or, if you installed the old way, the `ceh-biomonitoring` conda environment) unless you choose another with `options(cehbio.python = "path/to/python")` or the `CEHBIO_PYTHON` environment variable. `options(cehbio.results = "...")` points R at a different results folder.

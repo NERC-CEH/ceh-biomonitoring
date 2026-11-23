@@ -24,6 +24,8 @@ Suggests:
     knitr,
     yaml,
     askpass,
+    magick,
+    av,
     rstudioapi,
     EntoInsights,
     testthat (>= 3.0.0)

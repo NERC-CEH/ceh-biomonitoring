@@ -161,7 +161,8 @@ cehbio_quarto <- function(install = TRUE) {
 #' get their own Python 3.11 environment in `cehbio_home()` (via uv), shared with the `cehbio` terminal
 #' command. Reports are made in R, and get Quarto and the R packages they use. Run it again with other pipelines to add them.
 #'
-#' @param pipelines any of "birds", "bats", "images", "validation", "reports", or "all".
+#' @param pipelines any of "birds", "bats", "images", "validation", "reports", "videos", or "all".
+#'   "videos" (`cehbio_video()`, `cehbio_soundscape()`) needs no Python either.
 #'   `cehbio_install("reports")` sets up reports only, with no Python at all: reports are made in R
 #' @param source where to install the toolkit's Python side from (default: the newest on GitHub)
 #' @param command also make the `cehbio` terminal command (default TRUE)
@@ -170,9 +171,13 @@ cehbio_install <- function(pipelines = "reports",
                            source = "https://github.com/NERC-CEH/ceh-biomonitoring/archive/refs/heads/main.zip",
                            command = TRUE) {
   pipelines <- unique(pipelines)
-  bad <- setdiff(pipelines, c("birds", "bats", "images", "validation", "reports", "all"))
-  if (length(bad)) stop("Unknown: ", paste(bad, collapse = ", "), ". Choose from birds, bats, images, validation, reports, all.", call. = FALSE)
-  python <- setdiff(pipelines, "reports")
+  bad <- setdiff(pipelines, c("birds", "bats", "images", "validation", "reports", "videos", "all"))
+  if (length(bad)) stop("Unknown: ", paste(bad, collapse = ", "), ". Choose from birds, bats, images, validation, reports, videos, all.", call. = FALSE)
+  if (any(c("videos", "all") %in% pipelines)) {                 # videos from R are made in R: magick and av
+    need <- c("magick", "av")[!vapply(c("magick", "av"), requireNamespace, TRUE, quietly = TRUE)]
+    if (length(need)) { message("Installing R packages: ", paste(need, collapse = ", ")); utils::install.packages(need) }
+  }
+  python <- setdiff(pipelines, c("reports", "videos"))
   if (length(python)) python <- union(python, "reports")    # the Python side's reports come too: they're small
   if (length(python)) {                        # the toolkit's own Python environment (reports in R don't need it)
     uv <- cehbio_uv()
