@@ -47,7 +47,7 @@ models:
     by: Mila / Rolnick lab (AMI project)
     released: 2024-04-17
     source: https://github.com/RolnickLab/ami-data-companion
-    licence: see source
+    licence: "None stated for the weights: ask the Rolnick lab before commercial use (code AGPL-3.0)"
     files:
       weights: {name: moth-nonmoth_resnet50_20240417_b4fe3efe.pth, bytes: 94373731,
                 sha256: cc46a7549485763d53e57989d078eedd34eac5c2489e663c21b8e3f40d6eb3d2,
@@ -63,7 +63,7 @@ models:
     by: Mila / Rolnick lab (AMI project)
     released: 2022-05-06
     source: https://github.com/RolnickLab/ami-data-companion
-    licence: see source
+    licence: "None stated for the weights: ask the Rolnick lab before commercial use (code AGPL-3.0)"
     files:
       weights: {name: moth-nonmoth-effv2b3_20220506_061527_30.pth, bytes: 51943133,
                 sha256: a334b01220e8de8acc149b2f1374ee27051129f0aea7b6da9e2be3574ac8156b,
@@ -79,7 +79,7 @@ models:
     by: Aarhus University (Bjerge et al. 2025, Remote Sensing in Ecology and Conservation)
     released: 2024-05-10
     source: https://github.com/kimbjerge/MCC24-trap (model_order_100524)
-    licence: see source (repository is GPL-3.0)
+    licence: GPL-3.0 (the weights are distributed in the MCC24-trap repository under its GPL-3.0 licence)
     files:
       weights: {name: dhc_best_128.pth, asset: insect-order-v2.pth, bytes: 98583101,
                 sha256: e101724a9dae719389335264a894a16f8cb2df2387575a68078ef278061a7618,
