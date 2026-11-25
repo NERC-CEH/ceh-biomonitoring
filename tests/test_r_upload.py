@@ -74,6 +74,7 @@ def service(tmp_path, monkeypatch):
     threading.Thread(target=srv.serve_forever, daemon=True).start()
     creds = tmp_path / "credentials.json"
     creds.write_text(json.dumps({"UPLOAD_URL": f"http://127.0.0.1:{srv.server_address[1]}/"}))
+    creds.chmod(0o600)                       # as a real credentials file should be (Linux/macOS check this)
     monkeypatch.setenv("CEHBIO_CREDENTIALS", str(creds))
     monkeypatch.setenv("CEHBIO_UPLOAD_USER", "partner")
     monkeypatch.setenv("CEHBIO_UPLOAD_PASSWORD", "hunter2")

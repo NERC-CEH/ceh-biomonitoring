@@ -3,12 +3,14 @@
 ## Unreleased
 
 **Models**
+- Licences stated for every model: the insect-order model is GPL-3.0; the moth/non-moth model's weights have no stated licence (ask the authors before commercial use). The README sums up which models can be used commercially.
 - The earlier insect-order model (`insect-order-v1`, 6 May 2024) is no longer offered; `insect-order-v2` (Bjerge et al., 10 May 2024) is the only one.
 
 **Videos and soundscapes**
 - `cehbio video`: a light trap's night as a video, every insect boxed, moths named with their scores, tracks with trails; `--individuals` follows insects close up. `cehbio soundscape birds|bats`: each species' best moment with its sound and a moving spectrogram, detections marked (bats slowed ten times), and the day at a glance. Encoded with PyAV inside Python, because managed laptops block ffmpeg.exe. Install with the `videos` extra.
 
 **Uploading from R**
+- Credentials files that other people can read: on Linux and macOS, the login in such a file is not used (R now checks this too, like Python), but the rest of the file, such as `UPLOAD_URL`, still is. Before, Python ignored the whole file and fell back to the real service address.
 - `cehbio_upload()`, `cehbio_deployments()` and `cehbio_request_deployment()` in the R package, with no Python: the same questions and the same upload log as `cehbio upload`, so an upload can be started in one and finished in the other. Tested against a stand-in upload service on every push.
 
 **Commercial or not**

@@ -11,7 +11,14 @@
 .saved_login <- function() {
   f <- .credentials_file()
   if (!file.exists(f)) return(list())
-  tryCatch(jsonlite::fromJSON(f, simplifyVector = TRUE), error = function(e) list())
+  saved <- tryCatch(jsonlite::fromJSON(f, simplifyVector = TRUE), error = function(e) list())
+  # as the Python tool: a login other people can read isn't used (the rest, e.g. UPLOAD_URL, isn't secret)
+  if (.Platform$OS.type == "unix" && length(saved) && any(c("UKCEH_username", "UKCEH_password") %in% names(saved)) &&
+      bitwAnd(as.integer(file.info(f)$mode), strtoi("44", 8L)) != 0) {
+    message("Not using the login in ", f, ": other people can read it (fix with chmod 600 ", f, ").")
+    saved[c("UKCEH_username", "UKCEH_password")] <- NULL
+  }
+  saved
 }
 
 .service <- function() {

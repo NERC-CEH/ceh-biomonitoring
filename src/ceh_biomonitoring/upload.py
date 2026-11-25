@@ -200,10 +200,12 @@ def saved_login(settings) -> dict:
     from .objectstore import credentials_path
     path = credentials_path(settings)
     try:
-        if os.name == "posix" and path.stat().st_mode & 0o044:
+        saved = json.loads(path.read_text(encoding="utf-8-sig"))
+        if os.name == "posix" and path.stat().st_mode & 0o044 and (saved.get("UKCEH_username") or saved.get("UKCEH_password")):
+            # a login others can read isn't used; the rest (e.g. UPLOAD_URL) isn't secret and still is
             print(f"Not using the login in {path}: other people can read it (fix with chmod 600 {path}).")
-            return {}
-        return json.loads(path.read_text(encoding="utf-8-sig"))
+            saved = {k: v for k, v in saved.items() if k not in ("UKCEH_username", "UKCEH_password")}
+        return saved if isinstance(saved, dict) else {}
     except (OSError, ValueError):
         return {}
 

@@ -107,6 +107,22 @@ def test_login_read_from_credentials_file(tmp_path, monkeypatch):
     assert upload.saved_login(s) == {}
 
 
+def test_login_others_can_read_is_not_used_but_the_address_is(tmp_path, monkeypatch, capsys):
+    """On Linux/macOS a login in a file other people can read is ignored; the service address is not secret."""
+    import json, os
+    f = tmp_path / "credentials.json"
+    f.write_text(json.dumps({"UKCEH_username": "u", "UKCEH_password": "p", "UPLOAD_URL": "http://127.0.0.1:9/"}))
+    monkeypatch.setenv("CEHBIO_CREDENTIALS", str(f))
+    s = Settings.load(profile="local", settings_file=tmp_path / "none.yml")
+    if os.name == "posix":
+        f.chmod(0o644)
+    else:                                    # on Windows, pretend inside upload.py only: files there look readable by others
+        import types
+        monkeypatch.setattr(upload, "os", types.SimpleNamespace(name="posix", environ=os.environ, path=os.path))
+    saved = upload.saved_login(s)
+    assert saved == {"UPLOAD_URL": "http://127.0.0.1:9/"} and "other people can read it" in capsys.readouterr().out
+
+
 def test_deployment_request_is_sent(monkeypatch, tmp_path, capsys):
     from ceh_biomonitoring import sites
     from ceh_biomonitoring.cli import build_parser
