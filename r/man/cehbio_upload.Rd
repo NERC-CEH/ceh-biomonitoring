@@ -46,7 +46,9 @@ file is logged in \verb{<results>/upload_logs/}, so running it again carries on 
 upload started with the Python tool can be finished here, and the other way round).
 }
 \details{
-Your username and password are asked for (the password stays hidden), or read from the
-\code{CEHBIO_UPLOAD_USER} and \code{CEHBIO_UPLOAD_PASSWORD} environment variables. Your files are never changed,
-moved or deleted.
+Use your own upload login from UKCEH (the old shared login no longer works). It's read from your
+\code{credentials.json} (\code{UKCEH_username}, \code{UKCEH_password}) or the \code{CEHBIO_UPLOAD_USER} and
+\code{CEHBIO_UPLOAD_PASSWORD} environment variables, or asked for (the password stays hidden). Each login
+sees and can upload to only the deployments UKCEH has given it, plus any it asked for once approved;
+the service refuses anything else, with the reason. Your files are never changed, moved or deleted.
 }

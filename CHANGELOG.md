@@ -1,6 +1,6 @@
 # Changes
 
-## Unreleased
+## 0.3.1 (26 November 2026)
 
 **Models**
 - Licences stated for every model: the insect-order model is GPL-3.0; the moth/non-moth model's weights have no stated licence (ask the authors before commercial use). The README sums up which models can be used commercially.

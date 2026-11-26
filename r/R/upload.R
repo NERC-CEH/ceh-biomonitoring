@@ -172,9 +172,11 @@
 #' file is logged in `<results>/upload_logs/`, so running it again carries on where it stopped (and an
 #' upload started with the Python tool can be finished here, and the other way round).
 #'
-#' Your username and password are asked for (the password stays hidden), or read from the
-#' `CEHBIO_UPLOAD_USER` and `CEHBIO_UPLOAD_PASSWORD` environment variables. Your files are never changed,
-#' moved or deleted.
+#' Use your own upload login from UKCEH (the old shared login no longer works). It's read from your
+#' `credentials.json` (`UKCEH_username`, `UKCEH_password`) or the `CEHBIO_UPLOAD_USER` and
+#' `CEHBIO_UPLOAD_PASSWORD` environment variables, or asked for (the password stays hidden). Each login
+#' sees and can upload to only the deployments UKCEH has given it, plus any it asked for once approved;
+#' the service refuses anything else, with the reason. Your files are never changed, moved or deleted.
 #'
 #' @param folder the folder or SD card with this deployment's data
 #' @param country,deployment as listed by the service (part of the name is enough if it's unique)
@@ -270,8 +272,9 @@ cehbio_upload <- function(folder = NULL, country = NULL, deployment = NULL, data
 
 #' Your deployments
 #'
-#' The deployments you can see on the UKCEH upload service, and whether each is active (ready for
-#' uploads) or pending (waiting for UKCEH to check it). The same as `cehbio deployments list`.
+#' The deployments your login can use on the UKCEH upload service (the ones UKCEH has given it, and
+#' any you asked for), and whether each is active (ready for uploads) or pending (waiting for UKCEH to
+#' check it). The same as `cehbio deployments list`.
 #' @param country only this country
 #' @param all include inactive and rejected ones
 #' @return a data frame, invisibly

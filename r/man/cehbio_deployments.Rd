@@ -15,6 +15,7 @@ cehbio_deployments(country = NULL, all = FALSE)
 a data frame, invisibly
 }
 \description{
-The deployments you can see on the UKCEH upload service, and whether each is active (ready for
-uploads) or pending (waiting for UKCEH to check it). The same as \verb{cehbio deployments list}.
+The deployments your login can use on the UKCEH upload service (the ones UKCEH has given it, and
+any you asked for), and whether each is active (ready for uploads) or pending (waiting for UKCEH to
+check it). The same as \verb{cehbio deployments list}.
 }

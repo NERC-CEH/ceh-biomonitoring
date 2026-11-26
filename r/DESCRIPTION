@@ -1,6 +1,6 @@
 Package: cehbio
 Title: UKCEH Biomonitoring Toolkit from R
-Version: 0.3.0
+Version: 0.3.1
 Authors@R: person("Alyssa", "Duffy", email = "alyduf@ceh.ac.uk", role = c("aut", "cre"))
 Description: Use the UKCEH ceh-biomonitoring toolkit entirely from R: install it, run the bird, bat
     and moth-trap pipelines, follow their progress, read the results, and make summary reports. The
