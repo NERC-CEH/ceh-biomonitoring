@@ -89,7 +89,7 @@ def _warm_species_cache(a) -> None:
         groups = [sel] if a.one_package else [d for _, d in sel.groupby("deployment_id", sort=True)]
         for rows in groups:
             M.species_for(rows, Settings.load(getattr(a, "profile", None)), a.species_list, a.species_taxon, False, "",
-                          with_global=a.blind is False)
+                          with_global=a.blind is False, since=a.species_since)
     except Exception as e:  # noqa: BLE001 - the job will still try itself
         print(f"  (couldn't fetch them now: {e})", flush=True)
 
@@ -199,6 +199,9 @@ def add_command(sub, common) -> None:
                                           "download, or any CSV with a species column). Default: GBIF's list for "
                                           "the country plus every species the models named, on the GBIF backbone")
     q.add_argument("--no-species-list", action="store_true", help="mothbot: don't add a species list")
+    q.add_argument("--species-since", type=int, metavar="YEAR",
+                   help="mothbot: build the GBIF country list only from records from this year on, e.g. 1980 "
+                        "(old records include species no longer there, or misidentified)")
     q.add_argument("--species-taxon", default="Lepidoptera",
                    help="mothbot: the group the country list covers (default Lepidoptera; e.g. Insecta)")
     q.add_argument("--clock-timezone", help="mothbot: the zone the camera clocks keep, e.g. UTC or +01:00, written with "
@@ -262,7 +265,7 @@ def add_command(sub, common) -> None:
                           one_package=a.one_package, keep_unzipped=a.keep_unzipped,
                           species_list="none" if a.no_species_list else a.species_list,
                           species_taxon=a.species_taxon, offline=a.offline, clock_timezone=a.clock_timezone,
-                          site_name=a.site_name)
+                          site_name=a.site_name, species_since=a.species_since)
         print(f"\nDone: {res}")
         print(f"\nThe packages are in {a.out}")
         if a.project:

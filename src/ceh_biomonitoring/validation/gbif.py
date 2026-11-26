@@ -12,6 +12,13 @@ species-list download, the layout Mothbot reads, and holds:
   * or your own list (--species-list): a GBIF species-list download, or any CSV with a species column,
     matched to the backbone the same way
 
+A GBIF country list is a STARTING POINT, not a checklist. It's every species with records GBIF holds for the
+country, so it can include misidentifications, old or museum records, vagrants and introduced species, and
+it misses species nobody has recorded or shared, especially in poorly recorded regions. We keep only
+records marked present, with no location problems GBIF has flagged, and not fossils; --species-since
+drops older records. Where a national or regional checklist exists, use it (--species-list), and have
+someone who knows the local fauna look over the list.
+
 Why the backbone: since October 2026 GBIF's own downloads use the Catalogue of Life (COL XR), with
 different keys. The backbone keeps the keys our models and earlier rounds use.
 
@@ -33,6 +40,13 @@ from pathlib import Path
 import pandas as pd
 
 API = "https://api.gbif.org/v1/"
+# Records that count towards a country list: everything except fossils.
+RECORD_KINDS = ["HUMAN_OBSERVATION", "MACHINE_OBSERVATION", "OBSERVATION", "PRESERVED_SPECIMEN", "MATERIAL_SAMPLE",
+                "MATERIAL_CITATION", "LIVING_SPECIMEN", "OCCURRENCE"]
+FEW_RECORDS = 5                               # species with fewer records than this are worth a second look
+CAUTION = ("A GBIF country list is a starting point, not a checklist: it can include misidentified, old, vagrant "
+           "or introduced species, and misses species nobody has recorded there. Use a national or regional "
+           "checklist where one exists (--species-list), and have someone who knows the local fauna check it.")
 BACKBONE = "d7dddbf4-2cf0-4f39-9b2a-bb099caae36c"
 SOURCE = "gbif-backbone"                      # Mothbot's name for this ID system
 COLUMNS = ["taxonKey", "scientificName", "acceptedTaxonKey", "acceptedScientificName", "numberOfOccurrences",
@@ -88,7 +102,7 @@ class Backbone:
     def _get(self, path: str, **params):
         if self.offline:
             return None
-        url = API + path + ("?" + urllib.parse.urlencode(params) if params else "")
+        url = API + path + ("?" + urllib.parse.urlencode(params, doseq=True) if params else "")
         for attempt in range(3):
             try:
                 req = urllib.request.Request(url, headers={"User-Agent": "ceh-biomonitoring (labelling species lists)"})
@@ -173,17 +187,21 @@ class Backbone:
         r = self._load("countries.json").get(str(iso2 or "").upper())
         return r.get("title") if r else None
 
-    def country_counts(self, iso2: str, higher_key: int, refresh: bool = False) -> dict[str, int] | None:
-        """{speciesKey: number of GBIF records} for a higher taxon in a country, or None if unknown."""
-        f = self.dir / "countries" / f"{iso2}_{higher_key}.json"
+    def country_counts(self, iso2: str, higher_key: int, refresh: bool = False, since: int | None = None) -> dict[str, int] | None:
+        """{speciesKey: number of GBIF records} for a higher taxon in a country, or None if unknown. Only records
+        marked present, with no location problem GBIF flagged, and not fossils; since: only from that year on."""
+        f = self.dir / "countries" / f"{iso2}_{higher_key}_q2{'_since' + str(since) if since else ''}.json"
         if f.exists() and not refresh:
             d = json.loads(f.read_text(encoding="utf-8"))
             if (date.today() - date.fromisoformat(d["fetched"][:10])).days <= MAX_AGE_DAYS or self.offline:
                 return d["counts"]
         counts, offset, step = {}, 0, 1000
         while True:
+            filters = dict(occurrenceStatus="PRESENT", hasGeospatialIssue="false", basisOfRecord=RECORD_KINDS)
+            if since:
+                filters["year"] = f"{int(since)},{date.today().year}"
             r = self._get("occurrence/search", country=iso2, taxonKey=higher_key, limit=0, facet="speciesKey",
-                          facetLimit=step, facetOffset=offset)
+                          facetLimit=step, facetOffset=offset, **filters)
             if r is None:
                 return (json.loads(f.read_text(encoding="utf-8"))["counts"] if f.exists() else None)
             got = (r.get("facets") or [{}])[0].get("counts", [])
@@ -243,7 +261,7 @@ def mothbot_taxon(rec: dict | None, name: str = "", extra_ranks: dict | None = N
 
 # --------------------------------------------------------------------- building a list
 def build(names, settings=None, country: str | None = None, taxon: str = "Lepidoptera",
-          own_list: str | None = None, offline: bool = False) -> tuple[pd.DataFrame, dict]:
+          own_list: str | None = None, offline: bool = False, since: int | None = None) -> tuple[pd.DataFrame, dict]:
     """The package's species list. names: the species the models named in it. Returns (list, about)."""
     bb = Backbone(settings, offline=offline)
     about = {"taxonomy": "GBIF Backbone Taxonomy", "checklist_key": BACKBONE, "made": date.today().isoformat(),
@@ -279,7 +297,7 @@ def build(names, settings=None, country: str | None = None, taxon: str = "Lepido
     if country:
         iso2 = bb.iso2(country)
         higher = bb.match(taxon) if taxon else None
-        counts = bb.country_counts(iso2, higher["key"]) if iso2 and higher else None
+        counts = bb.country_counts(iso2, higher["key"], since=since) if iso2 and higher else None
         if counts is None:
             about["parts"].append({"country": country, "taxon": taxon, "note": "GBIF not reachable and nothing "
                                    "cached: the list has only the species the models named"})
@@ -289,8 +307,13 @@ def build(names, settings=None, country: str | None = None, taxon: str = "Lepido
                     add(rec, n)
             about["country_name"] = bb.country_name(iso2)
             about["parts"].append({"country": country, "iso2": iso2, "taxon": taxon, "taxon_key": higher["key"],
-                                   "species": len(counts), "source": f"{API}occurrence/search?country={iso2}"
+                                   "species": len(counts), "since": since,
+                                   "few_records": sum(1 for n in counts.values() if int(n) < FEW_RECORDS),
+                                   "filters": "occurrenceStatus=PRESENT, no geospatial issues, no fossils"
+                                              + (f", records from {since} on" if since else ""),
+                                   "source": f"{API}occurrence/search?country={iso2}"
                                    f"&taxonKey={higher['key']}&facet=speciesKey"})
+            about["caution"] = CAUTION
 
     named = bb.match_all(names)
     for n, rec in named.items():

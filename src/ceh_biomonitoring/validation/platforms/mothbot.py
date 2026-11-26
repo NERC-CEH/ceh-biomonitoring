@@ -555,7 +555,7 @@ def country_of(rows: pd.DataFrame) -> str | None:
 
 
 def species_for(rows: pd.DataFrame, settings, own: str | None, taxon: str, offline: bool, round_date: str,
-                with_global: bool = False) -> dict:
+                with_global: bool = False, since: int | None = None) -> dict:
     """The package's species list. The global model's guesses (often species from other continents) are
     only added when its machine IDs are shown (with_global), so they're on the list the expert sees."""
     from .. import gbif
@@ -566,7 +566,12 @@ def species_for(rows: pd.DataFrame, settings, own: str | None, taxon: str, offli
     if "species" in rows.columns:
         names |= {str(x) for x in rows["species"].dropna().unique() if _has(x) and not str(x).startswith("not a moth")}
     country = country_of(rows)
-    table, about = gbif.build(names, settings, country=country, taxon=taxon, own_list=own, offline=offline)
+    table, about = gbif.build(names, settings, country=country, taxon=taxon, own_list=own, offline=offline, since=since)
+    part = next((p for p in about.get("parts", []) if p.get("iso2")), None)
+    if part and not own:
+        print(f"   Species list: {part['species']} species with GBIF records in {about.get('country_name') or country}"
+              f" ({part['few_records']} with fewer than {gbif.FEW_RECORDS} records), plus the species the models named.\n"
+              f"   NOTE: {gbif.CAUTION}", flush=True)
     if about.get("offline"):
         print("   NOTE: GBIF couldn't be reached and isn't cached for this: the species list has names only. "
               "Run once on a machine with internet (e.g. a sci machine) to fill the cache.", flush=True)
@@ -582,7 +587,7 @@ def prepare(sel: pd.DataFrame, out: Path, settings=None, blind: bool | None = No
             cluster_method: str = "leaf", min_cluster_size: int = 3, one_package: bool = False,
             keep_unzipped: bool = False, round_date: str | None = None, species_list: str | None = None,
             species_taxon: str = "Lepidoptera", offline: bool = False, clock_timezone: str | None = None,
-            site_name: str | None = None, **_) -> dict:
+            site_name: str | None = None, species_since: int | None = None, **_) -> dict:
     """species_list: None (built from GBIF for the package's country), a CSV of your own, or "none"."""
     from .. import embeddings as E
     from .. import gbif
@@ -608,7 +613,7 @@ def prepare(sel: pd.DataFrame, out: Path, settings=None, blind: bool | None = No
             species = None
             if not (isinstance(species_list, str) and species_list.lower() == "none") and not (pkg / DONE).exists():
                 species = species_for(rows, settings, species_list, species_taxon, offline, round_date,
-                                      with_global=not blind)
+                                      with_global=not blind, since=species_since)
                 Path(f"{pkg}_species_list.json").parent.mkdir(parents=True, exist_ok=True)
                 Path(f"{pkg}_species_list.json").write_text(json.dumps(species["about"], indent=2, default=str))
                 a = species["about"]

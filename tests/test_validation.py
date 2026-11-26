@@ -489,3 +489,28 @@ def test_media_finds_files_in_several_local_folders(tmp_path):
         assert m.get({"image_path": "/elsewhere/photo_2.jpg"}) == b / "photo_2.jpg"         # found by name
         with pytest.raises(FileNotFoundError, match="source-root"):
             m.get({"image_path": "/elsewhere/missing.jpg", "bucket": "local"})
+
+
+def test_gbif_country_lists_are_filtered_and_come_with_a_caution(monkeypatch):
+    """Only present, non-fossil records without location problems; --species-since adds a year range; the
+    summary says how many species have few records and that the list needs checking."""
+    from ceh_biomonitoring.validation import gbif
+    asked = []
+    real = gbif.Backbone._get
+
+    def spy(self, path, **params):
+        if path == "occurrence/search":
+            asked.append(params)
+        return real(self, path, **params)
+    monkeypatch.setattr(gbif.Backbone, "_get", spy)
+    table, about = gbif.build(["Agrius convolvuli"], country="Singapore", since=1980)
+    q = asked[0]
+    assert q["occurrenceStatus"] == "PRESENT" and q["hasGeospatialIssue"] == "false"
+    assert "FOSSIL_SPECIMEN" not in q["basisOfRecord"] and "HUMAN_OBSERVATION" in q["basisOfRecord"]
+    assert q["year"].startswith("1980,")
+    part = next(p for p in about["parts"] if p.get("iso2") == "SG")
+    assert part["species"] == 2 and part["few_records"] == 1 and part["since"] == 1980     # 3 records < 5
+    assert "starting point, not a checklist" in about["caution"]
+    asked.clear()
+    gbif.build([], country="Singapore")                     # no year range: a separate cache, asked again
+    assert asked and "year" not in asked[0]

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+**Species lists for expert labelling**
+- GBIF country lists use only records marked present, with no location problems GBIF flagged, and not fossils; `--species-since YEAR` builds them from recent records only. Each package says how many species have fewer than 5 records, and that a GBIF list is a starting point, not a checklist: use a national or regional checklist where one exists (`--species-list`). Guides updated.
+
 **Uploading**
 - `cehbio uploaded` (R: `cehbio_uploaded_files()`, `cehbio_download_files()`): list and download the files already stored for your own deployments, through the upload service with your upload login, so no object-store key is needed.
 
