@@ -31,7 +31,7 @@ Every upload goes to one deployment, so that UKCEH always knows exactly where an
 
 ## Ask for a deployment
 
-You need the [upload tool installed](upload-guide.md#part-1-set-up-once) and your upload username and password.
+You need the [upload tool installed](upload-guide.md#part-1-set-up-once) and your own upload login (UKCEH gives each person one; the old shared login no longer works). A deployment you ask for is linked to your login: once UKCEH approves it, it appears in your list and you can upload to it.
 
 ```
 cehbio deployments request
