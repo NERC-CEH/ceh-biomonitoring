@@ -10,6 +10,7 @@
 - `cehbio video`: a light trap's night as a video, every insect boxed, moths named with their scores, tracks with trails; `--individuals` follows insects close up. `cehbio soundscape birds|bats`: each species' best moment with its sound and a moving spectrogram, detections marked (bats slowed ten times), and the day at a glance. Encoded with PyAV inside Python, because managed laptops block ffmpeg.exe. Install with the `videos` extra.
 
 **Uploading from R**
+- Each upload login sees and uploads to only its own deployments (UKCEH decides which, on its approvals app), and the service refuses other deployments, inactive ones and the wrong bucket. `cehbio upload` and `cehbio_upload()` say plainly when a login has no deployments yet or isn't allowed, instead of retrying.
 - Credentials files that other people can read: on Linux and macOS, the login in such a file is not used (R now checks this too, like Python), but the rest of the file, such as `UPLOAD_URL`, still is. Before, Python ignored the whole file and fell back to the real service address.
 - `cehbio_upload()`, `cehbio_deployments()` and `cehbio_request_deployment()` in the R package, with no Python: the same questions and the same upload log as `cehbio upload`, so an upload can be started in one and finished in the other. Tested against a stand-in upload service on every push.
 

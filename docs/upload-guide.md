@@ -8,7 +8,7 @@ If anything goes wrong or you have a question, email **Alyssa Duffy** at [alyduf
 
 ## What you need
 
-- **An upload username and password.** UKCEH gives these to partners when it has been agreed that UKCEH will process their data. If you don't have them, email Alyssa Duffy at [alyduf@ceh.ac.uk](mailto:alyduf@ceh.ac.uk).
+- **Your own upload username and password.** UKCEH gives each person their own login (usually as a `credentials.json` file) when it has been agreed that UKCEH will process their data. Don't share it: each login sees **only the deployments UKCEH has given it**, plus any you ask for yourself, and can only upload to those. If you don't have one, email Alyssa Duffy at [alyduf@ceh.ac.uk](mailto:alyduf@ceh.ac.uk).
 - **A deployment for each device**: one device at one site for one survey. See [Setting up your sites](setting-up-sites.md).
 - **Your survey data**, such as an SD card or a folder on your computer. One upload covers one deployment, so keep each deployment's data in its own folder. Folders inside it are fine; they are searched too.
 - **A computer** running Windows, macOS or Linux, with an internet connection.
@@ -122,7 +122,10 @@ You can close the window when it's finished. Uploading a large deployment can ta
 This is usually a short break in the internet connection or the upload service. Run `cehbio upload` again with the same answers; only the failed files are retried. If they still fail a few hours later, email [alyduf@ceh.ac.uk](mailto:alyduf@ceh.ac.uk) and attach the upload log (see [Good to know](#good-to-know)).
 
 **My deployment isn't in the list.**
-Don't upload it somewhere else. Ask for it with `cehbio deployments request`: see [Setting up your sites](setting-up-sites.md). Once UKCEH has approved it, it appears in the list.
+You only see the deployments given to your login. If it's one UKCEH set up for you, email us and we'll add it to your login (no new login needed; it appears within a minute). If it's new, ask for it with `cehbio deployments request`: see [Setting up your sites](setting-up-sites.md). Once UKCEH has approved your request, it's yours and appears in the list. Never upload it to another deployment: the service refuses deployments that aren't yours.
+
+**It says my login can't upload to a deployment, or the data goes in a different bucket.**
+The upload service checks every file: the deployment must be yours and active, and the data goes in that deployment's own bucket. Choose the deployment from the list rather than typing it, and email us if it should be yours.
 
 **I uploaded files to the wrong deployment or data type.**
 Email [alyduf@ceh.ac.uk](mailto:alyduf@ceh.ac.uk) as soon as you can, saying what you uploaded and where to. We'll move the files to the right place.

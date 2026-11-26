@@ -150,3 +150,19 @@ def test_deployment_request_is_sent(monkeypatch, tmp_path, capsys):
                                      "--device-id", "X", "--start", "2027-05-01", "--notes", "", "--yes"])
     with pytest.raises(SystemExit):
         sites.request(bad, s)
+
+
+def test_a_refusal_is_said_plainly_and_not_retried(monkeypatch):
+    svc = upload.UploadService("http://127.0.0.1:9/", "u", "p")
+    calls = []
+
+    class Reply:
+        status_code, text = 403, ""
+
+        def json(self):
+            return {"detail": "Your login can't upload to dep000001."}
+
+    monkeypatch.setattr(svc.http, "post", lambda *a, **k: calls.append(1) or Reply())
+    with pytest.raises(upload.Refused, match="can't upload to dep000001"):
+        svc.upload_link({}, "IMG_1.jpg", "image/jpeg")
+    assert len(calls) == 1

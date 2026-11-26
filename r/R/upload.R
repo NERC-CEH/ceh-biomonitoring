@@ -45,7 +45,7 @@
   for (i in seq_len(attempts)) {
     r <- tryCatch(f(), error = function(e) e)
     if (!inherits(r, "error")) return(r)
-    if (i == attempts) stop(r)
+    if (i == attempts || inherits(r, "cehbio_refused") || grepl("did not accept your username", conditionMessage(r))) stop(r)
     Sys.sleep(min(60, base * 2^(i - 1)))
   }
 }
@@ -61,6 +61,11 @@
   txt <- rawToChar(r$content)
   Encoding(txt) <- "UTF-8"
   if (r$status_code == 401) stop("The upload service did not accept your username or password.", call. = FALSE)
+  if (r$status_code %in% c(403, 422)) {
+    why <- tryCatch(jsonlite::fromJSON(txt)$detail, error = function(e) NULL)
+    stop(structure(class = c("cehbio_refused", "error", "condition"),
+                   list(message = substr(if (is.character(why)) why else txt, 1, 500), call = NULL)))
+  }
   if (r$status_code >= 400) stop(sprintf("HTTP %d at %s: %s", r$status_code, path, substr(txt, 1, 500)), call. = FALSE)
   tryCatch(jsonlite::fromJSON(txt, simplifyVector = FALSE), error = function(e) txt)
 }
@@ -187,6 +192,10 @@ cehbio_upload <- function(folder = NULL, country = NULL, deployment = NULL, data
   svc <- .service()
   message("Fetching the list of deployments...")
   deps <- Filter(function(d) identical(d$status, "active"), .svc_deployments(svc))
+  if (!length(deps)) message("Your login has no active deployments yet. Each login only sees the deployments UKCEH has given it.\n",
+                             "  - If you're expecting one, ask UKCEH to add it to your login.\n",
+                             "  - To ask for a new one: cehbio_request_deployment()\n",
+                             "  - You can still try a test upload: country = \"Test\".")
   name <- name %||% .need_answer("Your full name: ")
   countries <- c(sort(unique(vapply(deps, function(d) d$country, ""))), "Test")
   country <- .choose("\nCountry:", countries, country)

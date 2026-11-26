@@ -38,10 +38,16 @@ def _now() -> str:
     return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+class Refused(RuntimeError):
+    """The upload service said no (e.g. a deployment this login can't use): trying again won't help."""
+
+
 def _retry(fn, attempts=5, base=2.0):
     for i in range(attempts):
         try:
             return fn()
+        except (Refused, PermissionError):
+            raise
         except Exception:  # noqa: BLE001
             if i == attempts - 1:
                 raise
@@ -58,6 +64,12 @@ class UploadService:
         r = self.http.post(self.url + path, data={**fields, **self.auth}, timeout=300)
         if r.status_code == 401:
             raise PermissionError("The upload service did not accept your username or password.")
+        if r.status_code in (403, 422):
+            try:
+                why = r.json().get("detail") or r.text
+            except ValueError:
+                why = r.text
+            raise Refused(str(why)[:500])
         if r.status_code >= 400:
             raise RuntimeError(f"HTTP {r.status_code} at {path}: {r.text[:500]}")
         try:
@@ -219,6 +231,11 @@ def run(args, settings) -> None:
     svc = UploadService(url, user, pw)
     print("Fetching the list of deployments...")
     deps = [d for d in svc.deployments() if d.get("status") == "active"]
+    if not deps:
+        print("Your login has no active deployments yet. Each login only sees the deployments UKCEH has given it.\n"
+              "  - If you're expecting one, ask UKCEH to add it to your login.\n"
+              "  - To ask for a new one: cehbio deployments request\n"
+              "  - You can still try a test upload: choose Test.")
 
     name = args.name or _ask("Your full name")
     countries = sorted({d["country"] for d in deps}) + ["Test"]
