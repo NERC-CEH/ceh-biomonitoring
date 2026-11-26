@@ -405,6 +405,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     from .uploaded import add_command as _add_uploaded
     _add_uploaded(sub, common)
+    from .specieslist import add_command as _add_species_list
+    _add_species_list(sub, common)
 
     r = sub.add_parser("run", parents=[common, dep], help="run a pipeline on a deployment")
     r.add_argument("--device", help="recorder, e.g. audiomoth, song-meter (see `cehbio devices`)")

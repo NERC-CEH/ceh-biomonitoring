@@ -48,6 +48,7 @@ cehbio run images --folder E:/trap_photos --project farm1 --deployment farm1-202
 | `max_crops_per_image` | `100` | keep at most this many boxes per photo, the highest-scoring |
 | `top_n` | `5` | species guesses per insect |
 | `species_list` | | a CSV with a `species` column (and optionally `month`, so each photo uses its own month's species), e.g. moths recorded near the site: guesses are chosen only from these (scores stay the model's own). Use a national or regional checklist where you can: a list made from GBIF records is a starting point and needs checking by someone who knows the local moths |
+| | | Make a first version with `cehbio species-list --country "Costa Rica" --region cri --by-month` (or `--lat --lon --radius-km` for a site): GBIF records, what the region's model can recognise, and your own `--checklist`, with a `check` column for anything to look at. Use the `_by_month.csv` it writes for month-aware guesses |
 | `species_list_unlikely` | `flag` | species the list marks `unlikely` in a month (a `likelihood` column) can still be guessed; `rank_1_unlikely_this_month` says when the top guess is one. `remove` leaves them out |
 | `ring_light` | `auto` with `--device lepisense`, otherwise off | find the ring light in each night's photos and remove boxes on it (see below); or a `<deployment>_ring_light.json` to use; `""` = off |
 | `ring_light_action` | `remove` | `flag` keeps boxes on the ring, marked in `masked_as` (they're still left out of labelling) |

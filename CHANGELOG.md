@@ -5,6 +5,9 @@
 **Species lists for expert labelling**
 - GBIF country lists use only records marked present, with no location problems GBIF flagged, and not fossils; `--species-since YEAR` builds them from recent records only. Each package says how many species have fewer than 5 records, and that a GBIF list is a starting point, not a checklist: use a national or regional checklist where one exists (`--species-list`). Guides updated.
 
+- `cehbio species-list`: a candidate species list for a place, from GBIF records in a country or within a distance of a point (`--lat --lon --radius-km`), the species the region's AMBER moth model can recognise (`--region`), and your own checklist (`--checklist`). Every row says where it came from and whether it needs checking (few records, not on your checklist, a species the model can't name). `--by-month` adds a month-by-month list from when each species has been recorded, ready for `species_list`.
+- The moth species models' label files now download from the AMBER project's public repository, so `cehbio models` and the species lists work outside JASMIN.
+
 **Uploading**
 - `cehbio uploaded` (R: `cehbio_uploaded_files()`, `cehbio_download_files()`): list and download the files already stored for your own deployments, through the upload service with your upload login, so no object-store key is needed.
 
