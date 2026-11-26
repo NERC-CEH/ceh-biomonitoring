@@ -356,3 +356,86 @@ cehbio_request_deployment <- function(name = NULL, country = NULL, site = NULL, 
           "Check with: cehbio_deployments()")
   invisible(r$deployment_id)
 }
+
+.find_deployment <- function(deps, given) {
+  g <- tolower(trimws(given %||% ""))
+  ids <- vapply(deps, function(d) tolower(d$deployment_id %||% ""), "")
+  if (g %in% ids) return(deps[[match(g, ids)]])
+  labels <- vapply(deps, function(d) tolower(paste(d$location_name %||% "", d$camera_id %||% "")), "")
+  hits <- which(nzchar(g) & grepl(g, labels, fixed = TRUE))
+  if (length(hits) == 1) return(deps[[hits]])
+  shown <- paste(vapply(deps[if (length(hits)) hits else seq_along(deps)][seq_len(min(15, max(1, length(deps))))],
+                        function(d) paste0(d$deployment_id, " (", d$location_name %||% "", ")"), ""), collapse = ", ")
+  stop(if (length(hits)) "Several" else "No", " deployments match '", given, "'. Yours: ",
+       if (length(deps)) shown else "none yet", call. = FALSE)
+}
+
+#' Files already stored for one of your deployments
+#'
+#' Asks the UKCEH upload service which files are stored for one of your deployments (finished ones too),
+#' with your own upload login: no object-store key is needed, and you only see your own deployments.
+#' The store gives 1,000 files at a time, so a big deployment takes a while; `name_prefix` (e.g. a date,
+#' `"202605"`) lists part of it. The same as `cehbio uploaded` in the Python toolkit.
+#'
+#' @param deployment deployment ID (e.g. `"dep000123"`) or part of its site name
+#' @param data_type e.g. `"snapshot_images"`, `"audible_recordings"`, `"ultrasound_recordings"`
+#' @param name_prefix only files whose names start with this
+#' @param out optional CSV file to write the list to
+#' @return a data frame: `filename`, `size` (bytes), `stored` (when it was stored)
+#' @export
+cehbio_uploaded_files <- function(deployment, data_type = "snapshot_images", name_prefix = "", out = NULL) {
+  svc <- .service()
+  d <- .find_deployment(.svc_deployments(svc), deployment)
+  base <- list(country = tolower(d$country_code), deployment = d$deployment_id, data_type = data_type)
+  message("Listing ", d$deployment_id, " (", d$location_name %||% "", "), ", data_type,
+          if (nzchar(name_prefix)) paste0(", names starting '", name_prefix, "'") else "", "...")
+  files <- list(); token <- ""
+  repeat {
+    r <- .retry(function() .svc_post(svc, "list-files/", c(base, list(name_prefix = name_prefix, continuation_token = token))))
+    files <- c(files, r$files)
+    token <- r[["next"]] %||% ""
+    if (!nzchar(token)) break
+    message("  ", length(files), " files so far...")
+  }
+  t <- data.frame(filename = vapply(files, function(f) f$filename, ""),
+                  size = vapply(files, function(f) as.numeric(f$size %||% NA), 0),
+                  stored = vapply(files, function(f) f$stored %||% "", ""), stringsAsFactors = FALSE)
+  message(nrow(t), " files (", format(round(sum(t$size, na.rm = TRUE) / 1e9, 2), nsmall = 2), " GB)")
+  if (!is.null(out)) utils::write.csv(t, out, row.names = FALSE)
+  attr(t, "deployment") <- base
+  t
+}
+
+#' Download files from one of your deployments
+#'
+#' Downloads files stored for one of your deployments through the UKCEH upload service (no object-store
+#' key needed). Files already in `dest` with the right size are skipped, so it's safe to run again.
+#'
+#' @param deployment deployment ID or part of its site name
+#' @param filenames file names to download, e.g. from [cehbio_uploaded_files()] (all of them if `NULL`)
+#' @param data_type as in [cehbio_uploaded_files()]
+#' @param dest folder to download into
+#' @return the paths of the downloaded files, invisibly
+#' @export
+cehbio_download_files <- function(deployment, filenames = NULL, data_type = "snapshot_images", dest = "downloads") {
+  listed <- cehbio_uploaded_files(deployment, data_type)
+  base <- attr(listed, "deployment")
+  want <- if (is.null(filenames)) listed else listed[listed$filename %in% filenames, , drop = FALSE]
+  if (!is.null(filenames) && length(missing <- setdiff(filenames, listed$filename)))
+    warning("Not stored for this deployment: ", paste(utils::head(missing, 10), collapse = ", "), call. = FALSE)
+  dir.create(dest, showWarnings = FALSE, recursive = TRUE)
+  svc <- .service()
+  paths <- character()
+  for (i in seq_len(nrow(want))) {
+    p <- file.path(dest, want$filename[i])
+    if (!(file.exists(p) && isTRUE(file.size(p) == want$size[i]))) {
+      link <- .retry(function() .svc_post(svc, "download-link/", c(base, list(filename = want$filename[i]))))$url
+      h <- curl::new_handle()
+      if (.Platform$OS.type == "windows") curl::handle_setopt(h, ssl_options = 2)
+      curl::curl_download(link, p, handle = h, quiet = TRUE)
+    }
+    paths <- c(paths, p)
+    if (i %% 50 == 0 || i == nrow(want)) message("  downloaded ", i, "/", nrow(want))
+  }
+  invisible(paths)
+}

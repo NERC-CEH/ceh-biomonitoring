@@ -403,6 +403,9 @@ def build_parser() -> argparse.ArgumentParser:
     u.add_argument("--log-dir", help="where to keep the upload log (default: <outputs>/upload_logs)")
     u.set_defaults(func=cmd_upload)
 
+    from .uploaded import add_command as _add_uploaded
+    _add_uploaded(sub, common)
+
     r = sub.add_parser("run", parents=[common, dep], help="run a pipeline on a deployment")
     r.add_argument("--device", help="recorder, e.g. audiomoth, song-meter (see `cehbio devices`)")
     r.add_argument("--timestamp-pattern", metavar="PATTERN",

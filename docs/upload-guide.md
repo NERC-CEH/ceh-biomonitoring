@@ -105,6 +105,20 @@ You can close the window when it's finished. Uploading a large deployment can ta
 
 ---
 
+## See what's already uploaded, and download it
+
+You can list the files stored for any of your deployments (finished ones too) and download them, with the same upload login. No object-store key is needed.
+
+```bash
+cehbio uploaded --deployment dep000123 --data-type snapshot_images            # writes dep000123_snapshot_images_files.csv
+cehbio uploaded --deployment "Site name" --name-prefix 202605                  # only files whose names start with 202605
+cehbio uploaded --deployment dep000123 --download E:/copies                    # also download them (skips ones already there)
+```
+
+In R: `cehbio_uploaded_files("dep000123")` returns a table (file name, size, when it was stored), and `cehbio_download_files("dep000123", filenames = c(...), dest = "downloads")` downloads them.
+
+Big deployments take a while to list: the store sends 1,000 files at a time. `--name-prefix` (R: `name_prefix`) lists part of one, e.g. one month.
+
 ## Good to know
 
 - **Your files are never changed, moved or deleted.** The tool only reads them.

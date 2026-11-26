@@ -33,6 +33,7 @@ For partners collecting recordings or photos for a UKCEH project. No coding need
 |---|---|---|
 | Ask for a deployment (one device, one site, one survey) | `cehbio deployments request` | [Setting up your sites](docs/setting-up-sites.md) |
 | Upload recordings or photos, with a log so nothing is sent twice | `cehbio upload` | [Upload guide](docs/upload-guide.md) |
+| See (and download) what's already stored for your deployments | `cehbio uploaded` | [Upload guide](docs/upload-guide.md#see-whats-already-uploaded-and-download-it) |
 
 ### 2. Find wildlife in your recordings and photos
 

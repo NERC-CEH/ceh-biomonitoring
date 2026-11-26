@@ -54,7 +54,24 @@ class Fake(BaseHTTPRequestHandler):
         if self.path.endswith("generate-presigned-url/"):
             port = self.server.server_address[1]
             return self._reply(200, {"url": f"http://127.0.0.1:{port}/put/{f['filename']}?X-Amz-Signature=SECRET"})
+        if self.path.endswith("list-files/"):                 # 2 per page, to test paging
+            names = sorted(n for n in Fake.stored if n.startswith(f.get("name_prefix", "")))
+            start = int(f.get("continuation_token") or 0)
+            more = start + 2 < len(names)
+            return self._reply(200, {"files": [{"filename": n, "size": Fake.stored[n][0], "stored": "2026-05-12T01:00:00"}
+                                               for n in names[start:start + 2]], "next": str(start + 2) if more else ""})
+        if self.path.endswith("download-link/"):
+            port = self.server.server_address[1]
+            return self._reply(200, {"url": f"http://127.0.0.1:{port}/get/{f['filename']}?X-Amz-Signature=SECRET"})
         self._reply(404, {})
+
+    def do_GET(self):
+        name = urllib.parse.unquote(self.path.split("/get/")[1].split("?")[0])
+        data = b"x" * Fake.stored[name][0]
+        self.send_response(200)
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
 
     def do_PUT(self):
         n = int(self.headers.get("Content-Length", 0))
@@ -149,3 +166,25 @@ def test_list_and_request_deployments_from_r(service):
     assert set(sent) == {"country", "location_name", "lat", "lon", "camera_id", "requested_by", "device_type",
                          "start_date", "end_date", "notes", "username", "password"}
     assert "Sent. Your deployment ID is dep000999" in r.stderr
+
+
+def test_list_and_download_stored_files_from_r_and_python(service, tmp_path):
+    card, logs = service
+    Fake.fail_once = set()
+    assert _r_upload(card, logs).returncode == 0                       # 4 files now stored
+    out, dest = tmp_path / "files.csv", tmp_path / "dl"
+    code = (f't <- cehbio::cehbio_uploaded_files("Doi Suthep", out = "{out.as_posix()}"); stopifnot(nrow(t) == 4, all(t$size == 20000)); '
+            f'p <- cehbio::cehbio_download_files("dep000078", filenames = c("IMG_0001.jpg", "IMG_0003.jpeg"), dest = "{dest.as_posix()}"); '
+            'stopifnot(length(p) == 2)')
+    r = subprocess.run([RSCRIPT, "-e", code], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr[-2000:]
+    assert out.read_text().count("IMG_") == 4 and (dest / "IMG_0001.jpg").stat().st_size == 20_000
+    # Python: the same list
+    from ceh_biomonitoring import uploaded
+    from ceh_biomonitoring.settings import Settings
+    s = Settings.load(profile="local", settings_file=tmp_path / "x.yml")
+    svc = uploaded.service(s)
+    dep = uploaded.find_deployment(svc.deployments(), "doi")
+    names = [f["filename"] for f in uploaded.list_files(svc, dep, "snapshot_images", quiet=True)]
+    assert names == sorted(["IMG_0001.jpg", "IMG_0002.JPG", "IMG_0003.jpeg", "IMG_0004.jpg"])
+    assert [f["filename"] for f in uploaded.list_files(svc, dep, "snapshot_images", "IMG_0004", quiet=True)] == ["IMG_0004.jpg"]

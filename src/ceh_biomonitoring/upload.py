@@ -91,6 +91,22 @@ class UploadService:
                 return bool(d[filename])
         raise RuntimeError(f"Unexpected reply from check-file-exist: {str(d)[:300]}")
 
+    def list_files(self, base: dict, name_prefix: str = "", progress=None) -> list[dict]:
+        """Files already stored for one of your deployments: [{filename, size, stored}], page by page."""
+        out, token = [], ""
+        while True:
+            page = {**base, "name_prefix": name_prefix, "continuation_token": token}
+            d = _retry(lambda: self._post("list-files/", page))
+            out += d.get("files", [])
+            token = d.get("next", "")
+            if progress and token:
+                progress(len(out))
+            if not token:
+                return out
+
+    def download_link(self, base: dict, filename: str) -> str:
+        return _retry(lambda: self._post("download-link/", {**base, "filename": filename}))["url"]
+
     def upload_link(self, base: dict, filename: str, file_type: str) -> str:
         d = _retry(lambda: self._post("generate-presigned-url/", {**base, "filename": filename, "file_type": file_type}))
         if isinstance(d, str):

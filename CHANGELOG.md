@@ -1,5 +1,10 @@
 # Changes
 
+## Unreleased
+
+**Uploading**
+- `cehbio uploaded` (R: `cehbio_uploaded_files()`, `cehbio_download_files()`): list and download the files already stored for your own deployments, through the upload service with your upload login, so no object-store key is needed.
+
 ## 0.3.1 (26 November 2026)
 
 **Models**
