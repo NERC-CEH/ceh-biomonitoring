@@ -1,0 +1,42 @@
+name: Something isn't working
+description: A command fails, gives an error, or the results look wrong
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for telling us. **Please don't paste passwords, keys or your credentials file**, and don't attach data you can't share publicly.
+  - type: input
+    id: command
+    attributes:
+      label: What did you run?
+      description: The command (or R function) and its options
+      placeholder: cehbio run images --folder E:/photos --project farm1 --set region=uk
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      description: Paste the error message if there is one (the last 20 lines or so are usually enough).
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: The output of `cehbio --version` (or `packageVersion("cehbio")` in R)
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where are you running it?
+      options: [Windows laptop, Mac, Linux, JASMIN, Polar, Other]
+    validations:
+      required: true
+  - type: dropdown
+    id: pipeline
+    attributes:
+      label: Which part?
+      options: [Uploading data, Birds, Bats, Images (moths and insects), Expert checking (validation), Reports, R package, Install, Other]

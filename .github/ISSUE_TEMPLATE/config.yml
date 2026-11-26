@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Sending data to UKCEH, or your upload login
+    url: https://github.com/NERC-CEH/ceh-biomonitoring/blob/main/docs/upload-guide.md#problems-and-questions
+    about: Most upload questions are answered here. For a login or a deployment, email the UKCEH team (see the guide).
